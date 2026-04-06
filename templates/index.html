@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>US Visa Interview Simulator</title>
+    <link rel="stylesheet" href="/static/avatar.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -12,100 +13,129 @@
             color: #e0e0e0;
             min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        .header { text-align: center; padding: 30px 0 20px; }
-        .header .seal { font-size: 48px; margin-bottom: 8px; }
+        .container { max-width: 820px; margin: 0 auto; padding: 20px; min-height: 100vh; display: flex; flex-direction: column; }
+        .header { text-align: center; padding: 24px 0 16px; }
+        .header .seal { font-size: 44px; margin-bottom: 6px; }
         .header h1 { font-size: 22px; font-weight: 700; color: #fff; }
         .header p { font-size: 13px; color: #667; margin-top: 4px; }
 
-        .setup { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
-        .setup p { color: #889; font-size: 14px; text-align: center; max-width: 400px; line-height: 1.5; }
+        /* Setup */
+        .setup { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 20px 0; }
+        .setup-card { background: #141a2a; border: 1px solid #1e2a42; border-radius: 14px; padding: 24px; max-width: 480px; width: 100%; }
+        .setup-card h3 { color: #5b9aff; font-size: 14px; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
+
+        .difficulty-row { display: flex; gap: 8px; }
+        .diff-btn {
+            flex: 1; padding: 14px 8px; border-radius: 10px; border: 1.5px solid #1e2a42; background: #0f1521;
+            color: #c0c0c0; cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .diff-btn:hover { border-color: #2a4a7a; background: #141c30; }
+        .diff-btn.selected { background: #1a2a4a; border-color: #5b9aff; color: #fff; }
+        .diff-btn .name { font-size: 14px; font-weight: 700; }
+        .diff-btn .desc { font-size: 10px; color: #778; margin-top: 4px; }
+
+        .upload-area {
+            border: 2px dashed #2a3a5a; border-radius: 10px; padding: 18px; text-align: center;
+            cursor: pointer; transition: all 0.2s; color: #889;
+        }
+        .upload-area:hover { border-color: #5b9aff; background: #0f1521; color: #b0b8c8; }
+        .upload-area.has-file { border-color: #4ae168; background: #0f1f12; color: #a0d8a8; }
+        .upload-area input[type=file] { display: none; }
+        .upload-area .icon { font-size: 24px; margin-bottom: 6px; }
+        .upload-area .label { font-size: 13px; }
+        .upload-area .hint { font-size: 11px; color: #556; margin-top: 4px; }
+
         .start-btn {
-            background: linear-gradient(135deg, #1a5fb4, #3584e4);
-            color: #fff; border: none; padding: 16px 56px; border-radius: 12px;
-            font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+            background: linear-gradient(135deg, #1a5fb4, #3584e4); color: #fff; border: none;
+            padding: 16px 56px; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s;
         }
         .start-btn:hover { background: linear-gradient(135deg, #1c68c8, #4094f4); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(53,132,228,0.3); }
         .start-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
+        /* Chat */
         .chat-container { flex: 1; display: none; flex-direction: column; }
         .chat-container.active { display: flex; }
 
-        .status-bar {
-            display: flex; align-items: center; gap: 8px;
-            padding: 12px 16px; background: #141a2a; border-radius: 10px; margin-bottom: 16px; font-size: 13px;
+        .top-bar { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 12px; background: #141a2a; border-radius: 12px; margin-bottom: 12px; }
+        .timer { color: #5b9aff; font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 600; }
+        .difficulty-badge { background: #1a2a4a; color: #5b9aff; padding: 4px 10px; border-radius: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .applicant-badge { color: #889; font-size: 12px; }
+
+        /* Avatar centered */
+        .avatar-area { display: flex; justify-content: center; padding: 8px 0 16px; }
+
+        .messages { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; gap: 12px; min-height: 180px; max-height: calc(100vh - 540px); }
+        .message { display: flex; gap: 10px; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .message .avatar-mini { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+        .message.officer .avatar-mini { background: #1a2a4a; }
+        .message.applicant .avatar-mini { background: #2a1a3a; }
+        .message .bubble { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.5; }
+        .message.officer .bubble { background: #141a2a; border: 1px solid #1e2a42; color: #d0d0d0; }
+        .message.applicant .bubble { background: #1a2044; border: 1px solid #2a3a6a; color: #d0d5e0; }
+
+        /* Coaching card */
+        .coaching {
+            margin-left: 40px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4;
+            animation: fadeIn 0.3s ease; border-left: 3px solid;
         }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ae168; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        .status-bar span { color: #889; }
-        .status-bar strong { color: #c0c0c0; }
-        .timer { margin-left: auto; color: #5b9aff; font-variant-numeric: tabular-nums; }
+        .coaching.strong { background: #0d1f12; border-left-color: #4ae168; color: #a0d8a8; }
+        .coaching.okay { background: #1f1a0d; border-left-color: #f5b800; color: #d8c898; }
+        .coaching.weak { background: #1f0d0d; border-left-color: #e05555; color: #d89898; }
+        .coaching .emoji { font-size: 16px; margin-right: 6px; }
 
-        .messages { flex:1; overflow-y:auto; padding:10px 0; display:flex; flex-direction:column; gap:16px; min-height:250px; max-height:calc(100vh - 400px); }
-        .message { display:flex; gap:12px; animation:fadeIn 0.3s ease; }
-        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .message .avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; margin-top:2px; }
-        .message.officer .avatar { background:#1a2a4a; }
-        .message.applicant .avatar { background:#2a1a3a; }
-        .message .bubble { max-width:85%; padding:12px 16px; border-radius:14px; font-size:15px; line-height:1.5; }
-        .message.officer .bubble { background:#141a2a; border:1px solid #1e2a42; color:#d0d0d0; }
-        .message.applicant .bubble { background:#1a2044; border:1px solid #2a3a6a; color:#d0d5e0; }
-        .message .label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
-        .message.officer .label { color:#5b9aff; }
-        .message.applicant .label { color:#a78bfa; }
-        .message.officer .bubble.speaking { border-color:#3b6fcf; box-shadow:0 0 12px rgba(59,111,207,0.15); }
+        /* Voice area */
+        .voice-area { padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .mic-btn { width: 64px; height: 64px; border-radius: 50%; border: 3px solid #1e2a42; background: #141a2a; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s; }
+        .mic-btn:hover { border-color: #3b6fcf; background: #1a2238; }
+        .mic-btn.listening { border-color: #e05555; background: #2a1a1a; animation: mic-pulse 1.5s infinite; }
+        .mic-btn.listening svg { fill: #e05555; }
+        @keyframes mic-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)} 50%{box-shadow:0 0 0 14px rgba(224,85,85,0)} }
+        .mic-btn svg { width: 24px; height: 24px; fill: #5b9aff; }
+        .mic-btn:disabled { opacity: 0.3; cursor: not-allowed; animation: none; }
+        .voice-status { font-size: 12px; color: #667; min-height: 18px; text-align: center; }
+        .voice-status.listening-text { color: #e05555; }
+        .voice-status.speaking-text { color: #5b9aff; }
+        .voice-transcript { font-size: 13px; color: #a0a8b8; min-height: 18px; text-align: center; font-style: italic; max-width: 80%; }
+        .voice-controls { display: flex; align-items: center; gap: 14px; }
+        .end-btn { background: transparent; border: 1px solid #4a2a2a; color: #e05555; padding: 7px 18px; border-radius: 8px; font-size: 12px; cursor: pointer; }
+        .end-btn:hover { background: #2a1a1a; }
 
-        .voice-area { padding:20px 0; display:flex; flex-direction:column; align-items:center; gap:12px; }
-        .mic-btn {
-            width:72px; height:72px; border-radius:50%; border:3px solid #1e2a42;
-            background:#141a2a; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.3s;
-        }
-        .mic-btn:hover { border-color:#3b6fcf; background:#1a2238; }
-        .mic-btn.listening { border-color:#e05555; background:#2a1a1a; animation:mic-pulse 1.5s infinite; }
-        .mic-btn.listening svg { fill:#e05555; }
-        @keyframes mic-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)} 50%{box-shadow:0 0 0 16px rgba(224,85,85,0)} }
-        .mic-btn svg { width:28px; height:28px; fill:#5b9aff; transition:fill 0.2s; }
-        .mic-btn:disabled { opacity:0.3; cursor:not-allowed; animation:none; }
-        .voice-status { font-size:13px; color:#667; min-height:20px; text-align:center; }
-        .voice-status.listening-text { color:#e05555; }
-        .voice-status.speaking-text { color:#5b9aff; }
-        .voice-transcript { font-size:14px; color:#a0a8b8; min-height:20px; text-align:center; font-style:italic; max-width:80%; }
-        .voice-controls { display:flex; align-items:center; gap:16px; }
-        .end-btn { background:transparent; border:1px solid #4a2a2a; color:#e05555; padding:8px 20px; border-radius:8px; font-size:13px; cursor:pointer; transition:all 0.2s; }
-        .end-btn:hover { background:#2a1a1a; border-color:#6a3a3a; }
+        .typing { display: flex; gap: 10px; }
+        .typing .avatar-mini { width: 30px; height: 30px; border-radius: 50%; background: #1a2a4a; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .typing-dots { background: #141a2a; border: 1px solid #1e2a42; border-radius: 12px; padding: 12px 18px; display: flex; gap: 5px; align-items: center; }
+        .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: #445; animation: bounce 1.4s infinite; }
+        .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
 
-        .typing { display:flex; gap:12px; animation:fadeIn 0.3s ease; }
-        .typing .avatar { width:36px; height:36px; border-radius:50%; background:#1a2a4a; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-        .typing-dots { background:#141a2a; border:1px solid #1e2a42; border-radius:14px; padding:14px 20px; display:flex; gap:5px; align-items:center; }
-        .typing-dots span { width:7px; height:7px; border-radius:50%; background:#445; animation:bounce 1.4s infinite; }
-        .typing-dots span:nth-child(2){animation-delay:0.2s} .typing-dots span:nth-child(3){animation-delay:0.4s}
-        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+        /* Score */
+        .score-container { display: none; flex-direction: column; gap: 18px; padding: 16px 0; overflow-y: auto; }
+        .score-container.active { display: flex; }
+        .score-header { text-align: center; padding: 16px; }
+        .score-header h2 { font-size: 20px; color: #fff; margin-bottom: 4px; }
+        .score-header p { font-size: 12px; color: #667; }
+        .feedback-card { background: #141a2a; border: 1px solid #1e2a42; border-radius: 14px; padding: 22px; line-height: 1.7; font-size: 13px; color: #c0c8d8; }
+        .feedback-card h2, .feedback-card h3 { color: #5b9aff; margin-top: 14px; margin-bottom: 6px; }
+        .feedback-card h2:first-child { margin-top: 0; }
+        .feedback-card strong { color: #e0e0e0; }
+        .feedback-card ul, .feedback-card ol { padding-left: 18px; margin: 6px 0; }
+        .feedback-card hr { border: none; border-top: 1px solid #1e2a42; margin: 14px 0; }
 
-        .score-container { display:none; flex-direction:column; gap:20px; padding:20px 0; overflow-y:auto; }
-        .score-container.active { display:flex; }
-        .score-header { text-align:center; padding:20px; }
-        .score-header h2 { font-size:20px; color:#fff; margin-bottom:4px; }
-        .score-header p { font-size:13px; color:#667; }
-        .feedback-card { background:#141a2a; border:1px solid #1e2a42; border-radius:14px; padding:24px; line-height:1.7; font-size:14px; color:#c0c8d8; }
-        .feedback-card h2,.feedback-card h3 { color:#5b9aff; margin-top:16px; margin-bottom:8px; }
-        .feedback-card h2:first-child { margin-top:0; }
-        .feedback-card strong { color:#e0e0e0; }
-        .feedback-card ul,.feedback-card ol { padding-left:20px; margin:8px 0; }
-        .feedback-card li { margin-bottom:6px; }
-        .feedback-card hr { border:none; border-top:1px solid #1e2a42; margin:16px 0; }
-        .retry-btn { background:#141a2a; border:1px solid #1e2a42; color:#5b9aff; padding:12px 32px; border-radius:10px; font-size:15px; cursor:pointer; transition:all 0.2s; align-self:center; }
-        .retry-btn:hover { background:#1a2238; border-color:#2a4a7a; }
-        .spinner { width:40px; height:40px; border:3px solid #1e2a42; border-top-color:#3b6fcf; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px; }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        .loading-score { text-align:center; padding:60px 20px; }
-        .loading-score p { color:#667; font-size:14px; }
+        .history-card { background: #0f1521; border: 1px solid #1e2a42; border-radius: 12px; padding: 16px; }
+        .history-card h3 { color: #5b9aff; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
+        .history-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a2030; font-size: 12px; }
+        .history-row:last-child { border-bottom: none; }
+        .history-row .date { color: #778; }
+        .history-row .score { color: #5b9aff; font-weight: 600; }
+
+        .retry-btn { background: #141a2a; border: 1px solid #1e2a42; color: #5b9aff; padding: 12px 28px; border-radius: 10px; font-size: 14px; cursor: pointer; align-self: center; }
+        .retry-btn:hover { background: #1a2238; border-color: #2a4a7a; }
+
+        .spinner { width: 36px; height: 36px; border: 3px solid #1e2a42; border-top-color: #3b6fcf; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-score { text-align: center; padding: 50px 20px; }
+        .loading-score p { color: #667; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -113,22 +143,61 @@
         <div class="header">
             <div class="seal">🇺🇸</div>
             <h1>US Visa Interview Simulator</h1>
-            <p>B1/B2 Tourist Visa — FIFA World Cup 2026</p>
+            <p>Voice-powered mock interview · Avatar · AI Coaching</p>
         </div>
 
+        <!-- Setup Screen -->
         <div class="setup" id="setupScreen">
-            <p>This is a tough mock interview tailored to your real DS-160 profile. The officer knows your history — two prior 214(b) refusals, your government job, your travel record, everything.</p>
-            <p>You have <strong>5 minutes</strong>. Questions are randomized each session. Speak clearly and confidently.</p>
+            <div class="setup-card">
+                <h3>Difficulty</h3>
+                <div class="difficulty-row">
+                    <div class="diff-btn" data-diff="easy">
+                        <div class="name">Easy</div>
+                        <div class="desc">Friendly officer</div>
+                    </div>
+                    <div class="diff-btn selected" data-diff="medium">
+                        <div class="name">Medium</div>
+                        <div class="desc">Realistic</div>
+                    </div>
+                    <div class="diff-btn" data-diff="hard">
+                        <div class="name">Hard</div>
+                        <div class="desc">Hostile officer</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-card">
+                <h3>Profile (Optional — defaults to Ashish)</h3>
+                <label class="upload-area" id="uploadArea">
+                    <div class="icon" id="uploadIcon">📄</div>
+                    <div class="label" id="uploadLabel">Upload your DS-160 (PDF)</div>
+                    <div class="hint" id="uploadHint">Or skip — defaults to Ashish's FIFA case</div>
+                    <input type="file" id="ds160File" accept=".pdf">
+                </label>
+            </div>
+
             <button class="start-btn" id="startBtn">Begin Interview</button>
+
+            <div class="setup-card" id="historyCard" style="display:none;">
+                <h3>📊 Your Past Interviews</h3>
+                <div id="historyList"></div>
+            </div>
         </div>
 
+        <!-- Chat Screen -->
         <div class="chat-container" id="chatScreen">
-            <div class="status-bar">
-                <div class="status-dot"></div>
-                <span>Interview in progress</span>
+            <div class="top-bar">
+                <div class="difficulty-badge" id="diffBadge">MEDIUM</div>
                 <div class="timer" id="timer">5:00</div>
+                <div class="applicant-badge" id="applicantBadge">Ashish</div>
             </div>
+
+            <div class="avatar-area">
+                <div id="avatarHost"></div>
+            </div>
+
             <div class="messages" id="messages"></div>
+
             <div class="voice-area">
                 <div class="voice-transcript" id="voiceTranscript"></div>
                 <div class="voice-controls">
@@ -141,16 +210,18 @@
             </div>
         </div>
 
+        <!-- Score Screen -->
         <div class="score-container" id="scoreScreen">
             <div class="score-header">
                 <h2>Interview Assessment</h2>
-                <p>Based on your complete interview performance</p>
+                <p>Detailed performance breakdown</p>
             </div>
             <div class="feedback-card" id="feedbackCard"></div>
             <button class="retry-btn" id="retryBtn">Try Again</button>
         </div>
     </div>
 
+    <script src="/static/avatar.js"></script>
     <script>
         const $ = id => document.getElementById(id);
         let interviewDone = false;
@@ -162,8 +233,68 @@
         let lastSpeechTime = 0;
         let timerInterval = null;
         let startTime = null;
-        const INTERVIEW_DURATION = 300; // 5 minutes
-        const SILENCE_TIMEOUT = 3000;   // 3 seconds of silence before auto-submit
+        let selectedDifficulty = 'medium';
+        let useUploaded = false;
+        let uploadedName = null;
+        const INTERVIEW_DURATION = 300;
+        const SILENCE_TIMEOUT = 3000;
+
+        // ---- Difficulty selector ----
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                selectedDifficulty = btn.dataset.diff;
+            });
+        });
+
+        // ---- DS-160 upload ----
+        $('ds160File').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            $('uploadIcon').textContent = '⏳';
+            $('uploadLabel').textContent = 'Uploading and parsing...';
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const res = await fetch('/api/upload_ds160', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    useUploaded = true;
+                    uploadedName = data.name;
+                    $('uploadArea').classList.add('has-file');
+                    $('uploadIcon').textContent = '✅';
+                    $('uploadLabel').textContent = `Loaded: ${data.name}`;
+                    $('uploadHint').textContent = `${data.questions_count} personalized questions ready`;
+                } else {
+                    $('uploadIcon').textContent = '❌';
+                    $('uploadLabel').textContent = 'Failed to parse PDF';
+                    $('uploadHint').textContent = data.error || 'Try again';
+                }
+            } catch (err) {
+                $('uploadIcon').textContent = '❌';
+                $('uploadLabel').textContent = 'Upload error';
+            }
+        });
+
+        // ---- Session history ----
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('visaHistory') || '[]');
+            if (history.length === 0) return;
+            $('historyCard').style.display = 'block';
+            $('historyList').innerHTML = history.slice(-5).reverse().map(h =>
+                `<div class="history-row"><span class="date">${h.date} · ${h.difficulty}</span><span class="score">${h.score}/100</span></div>`
+            ).join('');
+        }
+        function saveToHistory(score, difficulty) {
+            const history = JSON.parse(localStorage.getItem('visaHistory') || '[]');
+            history.push({
+                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                score, difficulty,
+            });
+            localStorage.setItem('visaHistory', JSON.stringify(history.slice(-20)));
+        }
+        loadHistory();
 
         // ---- Timer ----
         function startTimer() {
@@ -188,61 +319,48 @@
             }, 1000);
         }
 
-        // ---- TTS via Edge Neural (backend) ----
+        // ---- TTS ----
         async function speakText(text) {
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
-
             $('voiceStatus').textContent = 'Officer is speaking...';
             $('voiceStatus').className = 'voice-status speaking-text';
             $('micBtn').disabled = true;
-
-            const bubbles = document.querySelectorAll('.message.officer .bubble');
-            const lastBubble = bubbles[bubbles.length - 1];
-            if (lastBubble) lastBubble.classList.add('speaking');
-
+            if (window.avatarSpeak) avatarSpeak();
             try {
                 const res = await fetch('/api/speak', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ text })
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
-
                 return new Promise((resolve) => {
                     currentAudio = new Audio(`/api/audio/${data.audio_id}`);
-                    currentAudio.playbackRate = 1.0;
-
                     const done = () => {
-                        if (lastBubble) lastBubble.classList.remove('speaking');
+                        if (window.avatarStopSpeak) avatarStopSpeak();
                         currentAudio = null;
                         $('micBtn').disabled = false;
                         if (!interviewDone) {
-                            $('voiceStatus').textContent = 'Tap the mic and speak your answer';
+                            $('voiceStatus').textContent = 'Tap the mic and speak';
                             $('voiceStatus').className = 'voice-status';
                         }
                         resolve();
                     };
-
                     currentAudio.onended = done;
                     currentAudio.onerror = done;
                     currentAudio.play().catch(done);
                 });
             } catch (e) {
-                console.error('TTS error:', e);
-                if (lastBubble) lastBubble.classList.remove('speaking');
+                if (window.avatarStopSpeak) avatarStopSpeak();
                 $('micBtn').disabled = false;
-                $('voiceStatus').textContent = 'Tap the mic and speak your answer';
-                $('voiceStatus').className = 'voice-status';
             }
         }
 
-        // ---- Speech Recognition (FIXED — no more cutting off) ----
+        // ---- Speech Recognition ----
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
         function startListening() {
             if (!SpeechRecognition) {
-                alert('Speech recognition not supported. Please use Chrome.');
+                alert('Use Chrome browser for voice input.');
                 return;
             }
             if (isListening || sending || interviewDone) return;
@@ -257,12 +375,12 @@
             isListening = true;
             lastSpeechTime = Date.now();
             $('micBtn').classList.add('listening');
-            $('voiceStatus').textContent = 'Listening... speak now';
+            $('voiceStatus').textContent = 'Listening...';
             $('voiceStatus').className = 'voice-status listening-text';
             $('voiceTranscript').textContent = '';
+            if (window.avatarListen) avatarListen();
 
             let finalTranscript = '';
-            let interimTranscript = '';
             let restartCount = 0;
             const MAX_RESTARTS = 5;
 
@@ -271,7 +389,6 @@
                 silenceTimer = setInterval(() => {
                     const silent = Date.now() - lastSpeechTime;
                     if (finalTranscript.trim() && silent > SILENCE_TIMEOUT) {
-                        // User stopped talking for 3 seconds — submit
                         clearInterval(silenceTimer);
                         try { recognition.stop(); } catch(e) {}
                     }
@@ -279,66 +396,44 @@
             }
 
             recognition.onresult = (event) => {
-                interimTranscript = '';
+                let interim = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const t = event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        finalTranscript += t + ' ';
-                    } else {
-                        interimTranscript += t;
-                    }
+                    if (event.results[i].isFinal) finalTranscript += t + ' ';
+                    else interim += t;
                     lastSpeechTime = Date.now();
                 }
-                $('voiceTranscript').textContent = (finalTranscript + interimTranscript).trim();
-                $('voiceStatus').textContent = '🔴 Listening... (pause 3s or tap mic to finish)';
-                $('voiceStatus').className = 'voice-status listening-text';
+                $('voiceTranscript').textContent = (finalTranscript + interim).trim();
+                $('voiceStatus').textContent = '🔴 Listening... pause to finish';
             };
 
             recognition.onend = () => {
                 clearInterval(silenceTimer);
                 const text = finalTranscript.trim();
-
                 if (text) {
-                    // Got text — submit it
                     isListening = false;
                     $('micBtn').classList.remove('listening');
                     $('voiceTranscript').textContent = '';
-                    $('voiceStatus').textContent = 'Processing...';
-                    $('voiceStatus').className = 'voice-status';
                     submitAnswer(text);
                 } else if (restartCount < MAX_RESTARTS && isListening) {
-                    // No text yet but user hasn't manually stopped — restart recognition
                     restartCount++;
                     try { recognition.start(); checkSilence(); } catch(e) {
                         isListening = false;
                         $('micBtn').classList.remove('listening');
-                        $('voiceStatus').textContent = 'Tap the mic to try again.';
-                        $('voiceStatus').className = 'voice-status';
                     }
                 } else {
                     isListening = false;
                     $('micBtn').classList.remove('listening');
-                    $('voiceStatus').textContent = "Didn't catch that. Tap the mic to try again.";
-                    $('voiceStatus').className = 'voice-status';
+                    if (window.avatarIdle) avatarIdle();
                 }
             };
 
             recognition.onerror = (event) => {
-                if (event.error === 'no-speech') {
-                    // Don't stop — let the onend handler restart
-                    return;
-                }
-                if (event.error === 'aborted') return;
-
+                if (event.error === 'no-speech' || event.error === 'aborted') return;
                 isListening = false;
                 clearInterval(silenceTimer);
                 $('micBtn').classList.remove('listening');
-                if (event.error === 'not-allowed') {
-                    $('voiceStatus').textContent = 'Microphone access denied. Please allow mic access.';
-                } else {
-                    $('voiceStatus').textContent = 'Error: ' + event.error + '. Tap the mic to retry.';
-                }
-                $('voiceStatus').className = 'voice-status';
+                if (window.avatarIdle) avatarIdle();
             };
 
             recognition.start();
@@ -347,7 +442,7 @@
 
         function stopListening() {
             if (recognition && isListening) {
-                isListening = false; // Prevent restart in onend
+                isListening = false;
                 clearInterval(silenceTimer);
                 try { recognition.stop(); } catch(e) {}
             }
@@ -362,23 +457,27 @@
         $('startBtn').addEventListener('click', async () => {
             $('startBtn').disabled = true;
             $('startBtn').textContent = 'Starting...';
-
             try {
                 const res = await fetch('/api/start', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ visa_type: 'B1/B2 Tourist/Business' })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ difficulty: selectedDifficulty, use_uploaded: useUploaded })
                 });
                 const data = await res.json();
-
                 $('setupScreen').style.display = 'none';
                 $('chatScreen').classList.add('active');
-                startTimer();
+                $('diffBadge').textContent = selectedDifficulty.toUpperCase();
+                $('applicantBadge').textContent = data.applicant || 'Ashish';
 
+                // Initialize avatar
+                if (window.avatarInit) {
+                    avatarInit($('avatarHost'));
+                }
+
+                startTimer();
                 addMessage('officer', data.message);
                 await speakText(data.message);
             } catch (e) {
-                alert('Error starting interview. Make sure the server is running.');
+                alert('Error starting interview.');
                 $('startBtn').disabled = false;
                 $('startBtn').textContent = 'Begin Interview';
             }
@@ -389,21 +488,23 @@
             if (!text || sending || interviewDone) return;
             sending = true;
             $('micBtn').disabled = true;
-
             addMessage('applicant', text);
             showTyping();
-
+            if (window.avatarThink) avatarThink();
             try {
                 const res = await fetch('/api/respond', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: text })
                 });
                 const data = await res.json();
-
                 hideTyping();
-                addMessage('officer', data.message);
 
+                // Show coaching feedback
+                if (data.coaching) {
+                    addCoaching(data.coaching);
+                }
+
+                addMessage('officer', data.message);
                 if (data.done) {
                     interviewDone = true;
                     clearInterval(timerInterval);
@@ -414,16 +515,14 @@
                 }
             } catch (e) {
                 hideTyping();
-                addMessage('officer', '[Connection error — please try again]');
+                addMessage('officer', '[Connection error]');
             }
-
             sending = false;
             $('micBtn').disabled = interviewDone;
         }
 
-        // ---- End interview ----
         $('endBtn').addEventListener('click', () => {
-            if (confirm('End the interview and get your score?')) {
+            if (confirm('End interview and get score?')) {
                 interviewDone = true;
                 clearInterval(timerInterval);
                 if (currentAudio) { currentAudio.pause(); currentAudio = null; }
@@ -433,17 +532,18 @@
             }
         });
 
-        // ---- Get score ----
         async function getScore() {
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
             $('chatScreen').classList.remove('active');
             $('scoreScreen').classList.add('active');
             $('feedbackCard').innerHTML = '<div class="loading-score"><div class="spinner"></div><p>Analyzing your interview...</p></div>';
-
             try {
                 const res = await fetch('/api/score', { method: 'POST' });
                 const data = await res.json();
                 $('feedbackCard').innerHTML = formatFeedback(data.feedback);
+                // Save to history
+                const scoreMatch = data.feedback.match(/Score: (\d+)/);
+                if (scoreMatch) saveToHistory(parseInt(scoreMatch[1]), selectedDifficulty);
             } catch (e) {
                 $('feedbackCard').innerHTML = '<p>Error generating feedback.</p>';
             }
@@ -466,8 +566,19 @@
             const div = document.createElement('div');
             div.className = `message ${type}`;
             const icon = type === 'officer' ? '👔' : '🧑';
-            const label = type === 'officer' ? 'Visa Officer' : 'You';
-            div.innerHTML = `<div class="avatar">${icon}</div><div><div class="label">${label}</div><div class="bubble">${escapeHtml(text)}</div></div>`;
+            div.innerHTML = `<div class="avatar-mini">${icon}</div><div class="bubble">${escapeHtml(text)}</div>`;
+            $('messages').appendChild(div);
+            $('messages').scrollTop = $('messages').scrollHeight;
+        }
+
+        function addCoaching(coaching) {
+            const div = document.createElement('div');
+            div.className = `coaching ${coaching.rating}`;
+            let html = `<span class="emoji">${coaching.emoji}</span>${escapeHtml(coaching.tip)}`;
+            if (coaching.what_to_add) {
+                html += `<br><small style="opacity:0.75">${escapeHtml(coaching.what_to_add)}</small>`;
+            }
+            div.innerHTML = html;
             $('messages').appendChild(div);
             $('messages').scrollTop = $('messages').scrollHeight;
         }
@@ -475,13 +586,11 @@
         function showTyping() {
             const div = document.createElement('div');
             div.className = 'typing'; div.id = 'typingIndicator';
-            div.innerHTML = '<div class="avatar">👔</div><div class="typing-dots"><span></span><span></span><span></span></div>';
+            div.innerHTML = '<div class="avatar-mini">👔</div><div class="typing-dots"><span></span><span></span><span></span></div>';
             $('messages').appendChild(div);
             $('messages').scrollTop = $('messages').scrollHeight;
         }
-
         function hideTyping() { const el = $('typingIndicator'); if (el) el.remove(); }
-
         function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
         $('retryBtn').addEventListener('click', () => location.reload());

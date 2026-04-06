@@ -8,6 +8,12 @@ import uuid
 import time
 import edge_tts
 from flask import Flask, render_template, request, jsonify, session, send_file
+from coaching import get_instant_feedback, get_difficulty_settings
+try:
+    from ds160_parser import extract_profile, generate_personalized_questions
+    DS160_AVAILABLE = True
+except ImportError:
+    DS160_AVAILABLE = False
 
 app = Flask(__name__)
 app.secret_key = "visa-interview-2026-fixed-key"  # FIXED key so sessions survive reloads
@@ -388,14 +394,16 @@ def get_reaction(score):
         return random.choice(PROBE_REACTIONS)
 
 
-def should_follow_up(score, answer):
+def should_follow_up(score, answer, difficulty="medium"):
+    settings = get_difficulty_settings(difficulty)
+    chance = settings["follow_up_chance"]
     if score < 50:
         return True
     if len(answer.split()) < 8:
         return True
     if any(w in answer.lower() for w in ['maybe', 'i think', 'not sure', 'i guess']):
         return True
-    return random.random() < 0.35
+    return random.random() < chance
 
 
 def generate_score_report(answers, visa_type):
@@ -571,10 +579,27 @@ def index():
 
 @app.route("/api/start", methods=["POST"])
 def start_interview():
+    data = request.json or {}
+    difficulty = data.get("difficulty", "medium")
+    use_uploaded = data.get("use_uploaded", False)
+
     sid = get_sid()
-    questions = build_session_questions()
+
+    # Check for uploaded DS-160 questions in session
+    if use_uploaded and sid in SESSIONS and SESSIONS[sid].get("uploaded_questions"):
+        questions = SESSIONS[sid]["uploaded_questions"]
+        random.shuffle(questions)
+        applicant_name = SESSIONS[sid].get("uploaded_name", "applicant")
+    else:
+        questions = build_session_questions()
+        applicant_name = "Ashish"
+
+    diff_settings = get_difficulty_settings(difficulty)
+    max_q = diff_settings["max_questions"]
+    questions = questions[:max_q]
 
     SESSIONS[sid] = {
+        **SESSIONS.get(sid, {}),
         "questions": questions,
         "current_q": 0,
         "answers": [],
@@ -582,12 +607,58 @@ def start_interview():
         "follow_up_used": 0,
         "got_opening_response": False,
         "start_time": time.time(),
-        "asked_keys": set(),          # track which question keys have been asked
-        "last_asked_key": None,       # prevent back-to-back same topic
-        "follow_up_done_for": set(),  # question keys that already got a follow-up
+        "asked_keys": set(),
+        "last_asked_key": None,
+        "follow_up_done_for": set(),
+        "difficulty": difficulty,
+        "applicant_name": applicant_name,
     }
 
-    return jsonify({"message": OPENING, "done": False})
+    return jsonify({"message": OPENING, "done": False, "difficulty": difficulty, "applicant": applicant_name})
+
+
+@app.route("/api/upload_ds160", methods=["POST"])
+def upload_ds160():
+    """Parse uploaded DS-160 PDF and generate personalized questions."""
+    if not DS160_AVAILABLE:
+        return jsonify({"error": "DS-160 parser not available"}), 500
+
+    if "file" not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+
+    file = request.files["file"]
+    if not file.filename.lower().endswith(".pdf"):
+        return jsonify({"error": "Please upload a PDF file"}), 400
+
+    # Save temporarily
+    tmp_path = os.path.join(AUDIO_DIR, f"{uuid.uuid4()}.pdf")
+    file.save(tmp_path)
+
+    try:
+        profile = extract_profile(tmp_path)
+        if not profile:
+            return jsonify({"error": "Could not parse the PDF. Make sure it's a valid DS-160 form."}), 400
+
+        questions = generate_personalized_questions(profile)
+
+        sid = get_sid()
+        if sid not in SESSIONS:
+            SESSIONS[sid] = {}
+        SESSIONS[sid]["uploaded_questions"] = questions
+        SESSIONS[sid]["uploaded_profile"] = profile
+        SESSIONS[sid]["uploaded_name"] = profile.get("given_name", "applicant").split()[0] if profile.get("given_name") else "applicant"
+
+        return jsonify({
+            "success": True,
+            "name": SESSIONS[sid]["uploaded_name"],
+            "questions_count": len(questions),
+            "fields_extracted": {k: v for k, v in profile.items() if k != "raw_text" and v},
+        })
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
 
 
 @app.route("/api/respond", methods=["POST"])
@@ -607,6 +678,7 @@ def respond():
     asked_keys = s.get("asked_keys", set())
     last_asked_key = s.get("last_asked_key", None)
     follow_up_done_for = s.get("follow_up_done_for", set())
+    difficulty = s.get("difficulty", "medium")
 
     score = 50  # default
 
@@ -661,7 +733,7 @@ def respond():
         else:
             officer_msg = random.choice(CLOSING_LINES)
         done = False
-    elif pending_follow_up is None and current_q > 0 and should_follow_up(score, user_message):
+    elif pending_follow_up is None and current_q > 0 and should_follow_up(score, user_message, difficulty):
         # Follow-up on the PREVIOUS question — but only if we haven't already done one for it
         prev_idx = max(0, current_q - 1)
         prev_q = questions[prev_idx] if prev_idx < len(questions) else None
@@ -711,7 +783,18 @@ def respond():
     s["last_asked_key"] = last_asked_key
     s["follow_up_done_for"] = follow_up_done_for
 
-    return jsonify({"message": officer_msg, "done": done})
+    # Generate coaching feedback for the answer just given
+    coaching = None
+    if got_opening and user_message:
+        # Determine which question this answer was for
+        if pending_follow_up is None and current_q > 0:
+            # Just answered a regular question — score the previous q
+            prev_idx = max(0, current_q - 1)
+            if prev_idx < len(questions):
+                q_key = questions[prev_idx]["key"]
+                coaching = get_instant_feedback(user_message, q_key, score)
+
+    return jsonify({"message": officer_msg, "done": done, "coaching": coaching, "score": score})
 
 
 async def _generate_speech(text, mp3_path):
