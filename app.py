@@ -12,6 +12,11 @@ import requests as _requests
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_2adc5d2157b53c440b2cd0c94780fe377d75a8e92d8ab7bd")
 # "Adam" — deep, mature American male, great for authority figures
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
+
+# D-ID — talking head video generation from a still photo
+DID_API_KEY = os.environ.get("DID_API_KEY", "c2VucGFpZHJpcGJyYW5kQGdtYWlsLmNvbQ:eJqBK0-M5KWGVZ_kRroTO")
+DID_SOURCE_URL = os.environ.get("DID_SOURCE_URL", "https://visa-interview-simulator.onrender.com/static/officer.png")
+DID_TALKS_CACHE = {}  # text -> result_url cache
 from flask import Flask, render_template, request, jsonify, session, send_file
 from coaching import get_instant_feedback, get_difficulty_settings
 try:
@@ -880,12 +885,85 @@ def _elevenlabs_with_timestamps(text):
     return audio_b64, words, wtimes, wdurations
 
 
+def _did_create_talk(text):
+    """Create a D-ID talking-head video from the officer photo. Returns mp4 URL."""
+    if text in DID_TALKS_CACHE:
+        return DID_TALKS_CACHE[text]
+
+    headers = {
+        "Authorization": f"Basic {DID_API_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    payload = {
+        "source_url": DID_SOURCE_URL,
+        "script": {
+            "type": "text",
+            "input": text,
+            "provider": {
+                "type": "microsoft",
+                "voice_id": "en-US-DavisNeural",
+                "voice_config": {"style": "Default"},
+            },
+        },
+        "config": {
+            "fluent": True,
+            "pad_audio": 0.0,
+            "stitch": True,
+            "result_format": "mp4",
+        },
+    }
+    r = _requests.post("https://api.d-id.com/talks", json=payload, headers=headers, timeout=30)
+    if r.status_code not in (200, 201):
+        raise RuntimeError(f"D-ID create {r.status_code}: {r.text[:300]}")
+    talk_id = r.json()["id"]
+
+    # Poll for completion
+    import time as _time
+    for _ in range(40):  # up to ~40s
+        _time.sleep(1)
+        pr = _requests.get(f"https://api.d-id.com/talks/{talk_id}", headers=headers, timeout=15)
+        if pr.status_code != 200:
+            continue
+        pj = pr.json()
+        status = pj.get("status")
+        if status == "done":
+            url = pj.get("result_url")
+            if url:
+                DID_TALKS_CACHE[text] = url
+                return url
+        if status in ("error", "rejected"):
+            raise RuntimeError(f"D-ID failed: {pj}")
+    raise RuntimeError("D-ID timed out")
+
+
+@app.route("/api/talk", methods=["POST"])
+def talk():
+    data = request.json or {}
+    text = data.get("text", "")
+    if not text:
+        return jsonify({"error": "No text"}), 400
+    try:
+        video_url = _did_create_talk(text)
+        return jsonify({"video_url": video_url})
+    except Exception as e:
+        print(f"[D-ID failed] {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route("/api/speak", methods=["POST"])
 def speak():
     data = request.json
     text = data.get("text", "")
     if not text:
         return jsonify({"error": "No text"}), 400
+
+    # Path 0: D-ID talking-head video (real lip-sync on the officer photo)
+    try:
+        video_url = _did_create_talk(text)
+        return jsonify({"video_url": video_url})
+    except Exception as did_err:
+        print(f"[D-ID failed -> audio fallback] {did_err}")
 
     # Path A: ElevenLabs with character timestamps (for 3D lip-sync)
     try:

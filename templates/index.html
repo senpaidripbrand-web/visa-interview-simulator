@@ -315,6 +315,17 @@
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
 
+                // Path 0: D-ID talking-head video (real lip sync on photo)
+                if (data.video_url && window.avatarPlayVideo) {
+                    await window.avatarPlayVideo(data.video_url);
+                    $('micBtn').disabled = false;
+                    if (!interviewDone) {
+                        $('voiceStatus').textContent = 'Tap the mic and speak';
+                        $('voiceStatus').className = 'voice-status';
+                    }
+                    return;
+                }
+
                 // Path A: TalkingHead lip-sync from base64 + word timings
                 if (data.audio_b64 && window.avatarSpeakB64) {
                     const ok = await window.avatarSpeakB64(data.audio_b64, data.words, data.wtimes, data.wdurations);
