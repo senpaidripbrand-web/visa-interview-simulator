@@ -832,6 +832,54 @@ def _generate_speech_elevenlabs(text, mp3_path):
         f.write(r.content)
 
 
+def _elevenlabs_with_timestamps(text):
+    """Returns (audio_b64, words, wtimes_ms, wdurations_ms) or raises."""
+    import base64 as _b64
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}/with-timestamps"
+    headers = {"xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json"}
+    payload = {
+        "text": text,
+        "model_id": "eleven_turbo_v2_5",
+        "output_format": "mp3_44100_128",
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.85,
+            "style": 0.55,
+            "use_speaker_boost": True,
+        },
+    }
+    r = _requests.post(url, json=payload, headers=headers, timeout=40)
+    if r.status_code != 200:
+        raise RuntimeError(f"EL/ts {r.status_code}: {r.text[:200]}")
+    j = r.json()
+    audio_b64 = j["audio_base64"]
+    align = j.get("alignment") or j.get("normalized_alignment") or {}
+    chars = align.get("characters", [])
+    starts = align.get("character_start_times_seconds", [])
+    ends = align.get("character_end_times_seconds", [])
+
+    words, wtimes, wdurations = [], [], []
+    cur, cur_start, cur_end = "", None, None
+    for ch, st, en in zip(chars, starts, ends):
+        if ch.isspace() or ch in ".,!?;:\"'()[]":
+            if cur:
+                words.append(cur)
+                wtimes.append(int((cur_start or 0) * 1000))
+                wdurations.append(max(80, int(((cur_end or cur_start or 0) - (cur_start or 0)) * 1000)))
+                cur, cur_start, cur_end = "", None, None
+        else:
+            if cur_start is None:
+                cur_start = st
+            cur_end = en
+            cur += ch
+    if cur:
+        words.append(cur)
+        wtimes.append(int((cur_start or 0) * 1000))
+        wdurations.append(max(80, int(((cur_end or cur_start or 0) - (cur_start or 0)) * 1000)))
+
+    return audio_b64, words, wtimes, wdurations
+
+
 @app.route("/api/speak", methods=["POST"])
 def speak():
     data = request.json
@@ -839,14 +887,25 @@ def speak():
     if not text:
         return jsonify({"error": "No text"}), 400
 
+    # Path A: ElevenLabs with character timestamps (for 3D lip-sync)
+    try:
+        audio_b64, words, wtimes, wdurations = _elevenlabs_with_timestamps(text)
+        return jsonify({
+            "audio_b64": audio_b64,
+            "words": words,
+            "wtimes": wtimes,
+            "wdurations": wdurations,
+        })
+    except Exception as el_err:
+        print(f"[EL timestamps failed -> file fallback] {el_err}")
+
+    # Path B: file-based fallback (ElevenLabs plain or Edge TTS)
     audio_id = str(uuid.uuid4())
     mp3_path = os.path.join(AUDIO_DIR, f"{audio_id}.mp3")
-
-    # Try ElevenLabs first (realistic), fall back to Edge TTS
     try:
         _generate_speech_elevenlabs(text, mp3_path)
-    except Exception as el_err:
-        print(f"[ElevenLabs failed, falling back to Edge TTS] {el_err}")
+    except Exception as el2:
+        print(f"[EL plain failed -> Edge TTS] {el2}")
         try:
             loop = asyncio.new_event_loop()
             loop.run_until_complete(_generate_speech(text, mp3_path))

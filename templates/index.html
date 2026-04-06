@@ -5,6 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>US Visa Interview Simulator</title>
     <link rel="stylesheet" href="/static/avatar.css">
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+      }
+    }
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -306,6 +314,21 @@
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
+
+                // Path A: TalkingHead lip-sync from base64 + word timings
+                if (data.audio_b64 && window.avatarSpeakB64) {
+                    const ok = await window.avatarSpeakB64(data.audio_b64, data.words, data.wtimes, data.wdurations);
+                    if (ok) {
+                        $('micBtn').disabled = false;
+                        if (!interviewDone) {
+                            $('voiceStatus').textContent = 'Tap the mic and speak';
+                            $('voiceStatus').className = 'voice-status';
+                        }
+                        return;
+                    }
+                }
+
+                // Path B: fallback <audio> playback
                 return new Promise((resolve) => {
                     currentAudio = new Audio(`/api/audio/${data.audio_id}`);
                     const done = () => {
