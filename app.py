@@ -9,7 +9,7 @@ import time
 import edge_tts
 import requests as _requests
 
-ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_91d4741d595c2e872cd1e18977a0c26bdb6b4bbdb548b0ed")
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_2adc5d2157b53c440b2cd0c94780fe377d75a8e92d8ab7bd")
 # "Adam" — deep, mature American male, great for authority figures
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
 from flask import Flask, render_template, request, jsonify, session, send_file
