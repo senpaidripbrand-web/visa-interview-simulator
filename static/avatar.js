@@ -4,7 +4,7 @@
  */
 
 // Free Ready Player Me avatar (man in suit). Override via window.AVATAR_URL.
-const RPM_AVATAR_URL = 'https://github.com/senpaidripbrand-web/visa-interview-simulator/releases/download/v1.0-assets/officer.glb';
+const RPM_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/avatars/avatarsdk.glb';
 
 window.avatarInit = async function (el) {
   el.innerHTML = `
