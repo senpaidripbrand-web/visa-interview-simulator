@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>US Visa Interview Simulator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e17;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header { text-align: center; padding: 30px 0 20px; }
+        .header .seal { font-size: 48px; margin-bottom: 8px; }
+        .header h1 { font-size: 22px; font-weight: 700; color: #fff; }
+        .header p { font-size: 13px; color: #667; margin-top: 4px; }
+
+        .setup { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+        .setup p { color: #889; font-size: 14px; text-align: center; max-width: 400px; line-height: 1.5; }
+        .start-btn {
+            background: linear-gradient(135deg, #1a5fb4, #3584e4);
+            color: #fff; border: none; padding: 16px 56px; border-radius: 12px;
+            font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .start-btn:hover { background: linear-gradient(135deg, #1c68c8, #4094f4); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(53,132,228,0.3); }
+        .start-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .chat-container { flex: 1; display: none; flex-direction: column; }
+        .chat-container.active { display: flex; }
+
+        .status-bar {
+            display: flex; align-items: center; gap: 8px;
+            padding: 12px 16px; background: #141a2a; border-radius: 10px; margin-bottom: 16px; font-size: 13px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ae168; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .status-bar span { color: #889; }
+        .status-bar strong { color: #c0c0c0; }
+        .timer { margin-left: auto; color: #5b9aff; font-variant-numeric: tabular-nums; }
+
+        .messages { flex:1; overflow-y:auto; padding:10px 0; display:flex; flex-direction:column; gap:16px; min-height:250px; max-height:calc(100vh - 400px); }
+        .message { display:flex; gap:12px; animation:fadeIn 0.3s ease; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .message .avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; margin-top:2px; }
+        .message.officer .avatar { background:#1a2a4a; }
+        .message.applicant .avatar { background:#2a1a3a; }
+        .message .bubble { max-width:85%; padding:12px 16px; border-radius:14px; font-size:15px; line-height:1.5; }
+        .message.officer .bubble { background:#141a2a; border:1px solid #1e2a42; color:#d0d0d0; }
+        .message.applicant .bubble { background:#1a2044; border:1px solid #2a3a6a; color:#d0d5e0; }
+        .message .label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+        .message.officer .label { color:#5b9aff; }
+        .message.applicant .label { color:#a78bfa; }
+        .message.officer .bubble.speaking { border-color:#3b6fcf; box-shadow:0 0 12px rgba(59,111,207,0.15); }
+
+        .voice-area { padding:20px 0; display:flex; flex-direction:column; align-items:center; gap:12px; }
+        .mic-btn {
+            width:72px; height:72px; border-radius:50%; border:3px solid #1e2a42;
+            background:#141a2a; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.3s;
+        }
+        .mic-btn:hover { border-color:#3b6fcf; background:#1a2238; }
+        .mic-btn.listening { border-color:#e05555; background:#2a1a1a; animation:mic-pulse 1.5s infinite; }
+        .mic-btn.listening svg { fill:#e05555; }
+        @keyframes mic-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(224,85,85,0.4)} 50%{box-shadow:0 0 0 16px rgba(224,85,85,0)} }
+        .mic-btn svg { width:28px; height:28px; fill:#5b9aff; transition:fill 0.2s; }
+        .mic-btn:disabled { opacity:0.3; cursor:not-allowed; animation:none; }
+        .voice-status { font-size:13px; color:#667; min-height:20px; text-align:center; }
+        .voice-status.listening-text { color:#e05555; }
+        .voice-status.speaking-text { color:#5b9aff; }
+        .voice-transcript { font-size:14px; color:#a0a8b8; min-height:20px; text-align:center; font-style:italic; max-width:80%; }
+        .voice-controls { display:flex; align-items:center; gap:16px; }
+        .end-btn { background:transparent; border:1px solid #4a2a2a; color:#e05555; padding:8px 20px; border-radius:8px; font-size:13px; cursor:pointer; transition:all 0.2s; }
+        .end-btn:hover { background:#2a1a1a; border-color:#6a3a3a; }
+
+        .typing { display:flex; gap:12px; animation:fadeIn 0.3s ease; }
+        .typing .avatar { width:36px; height:36px; border-radius:50%; background:#1a2a4a; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+        .typing-dots { background:#141a2a; border:1px solid #1e2a42; border-radius:14px; padding:14px 20px; display:flex; gap:5px; align-items:center; }
+        .typing-dots span { width:7px; height:7px; border-radius:50%; background:#445; animation:bounce 1.4s infinite; }
+        .typing-dots span:nth-child(2){animation-delay:0.2s} .typing-dots span:nth-child(3){animation-delay:0.4s}
+        @keyframes bounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-6px)} }
+
+        .score-container { display:none; flex-direction:column; gap:20px; padding:20px 0; overflow-y:auto; }
+        .score-container.active { display:flex; }
+        .score-header { text-align:center; padding:20px; }
+        .score-header h2 { font-size:20px; color:#fff; margin-bottom:4px; }
+        .score-header p { font-size:13px; color:#667; }
+        .feedback-card { background:#141a2a; border:1px solid #1e2a42; border-radius:14px; padding:24px; line-height:1.7; font-size:14px; color:#c0c8d8; }
+        .feedback-card h2,.feedback-card h3 { color:#5b9aff; margin-top:16px; margin-bottom:8px; }
+        .feedback-card h2:first-child { margin-top:0; }
+        .feedback-card strong { color:#e0e0e0; }
+        .feedback-card ul,.feedback-card ol { padding-left:20px; margin:8px 0; }
+        .feedback-card li { margin-bottom:6px; }
+        .feedback-card hr { border:none; border-top:1px solid #1e2a42; margin:16px 0; }
+        .retry-btn { background:#141a2a; border:1px solid #1e2a42; color:#5b9aff; padding:12px 32px; border-radius:10px; font-size:15px; cursor:pointer; transition:all 0.2s; align-self:center; }
+        .retry-btn:hover { background:#1a2238; border-color:#2a4a7a; }
+        .spinner { width:40px; height:40px; border:3px solid #1e2a42; border-top-color:#3b6fcf; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto 16px; }
+        @keyframes spin { to{transform:rotate(360deg)} }
+        .loading-score { text-align:center; padding:60px 20px; }
+        .loading-score p { color:#667; font-size:14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="seal">🇺🇸</div>
+            <h1>US Visa Interview Simulator</h1>
+            <p>B1/B2 Tourist Visa — FIFA World Cup 2026</p>
+        </div>
+
+        <div class="setup" id="setupScreen">
+            <p>This is a tough mock interview tailored to your real DS-160 profile. The officer knows your history — two prior 214(b) refusals, your government job, your travel record, everything.</p>
+            <p>You have <strong>5 minutes</strong>. Questions are randomized each session. Speak clearly and confidently.</p>
+            <button class="start-btn" id="startBtn">Begin Interview</button>
+        </div>
+
+        <div class="chat-container" id="chatScreen">
+            <div class="status-bar">
+                <div class="status-dot"></div>
+                <span>Interview in progress</span>
+                <div class="timer" id="timer">5:00</div>
+            </div>
+            <div class="messages" id="messages"></div>
+            <div class="voice-area">
+                <div class="voice-transcript" id="voiceTranscript"></div>
+                <div class="voice-controls">
+                    <button class="mic-btn" id="micBtn" title="Click to speak">
+                        <svg viewBox="0 0 24 24"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
+                    </button>
+                    <button class="end-btn" id="endBtn">End Interview</button>
+                </div>
+                <div class="voice-status" id="voiceStatus">Tap the mic and speak your answer</div>
+            </div>
+        </div>
+
+        <div class="score-container" id="scoreScreen">
+            <div class="score-header">
+                <h2>Interview Assessment</h2>
+                <p>Based on your complete interview performance</p>
+            </div>
+            <div class="feedback-card" id="feedbackCard"></div>
+            <button class="retry-btn" id="retryBtn">Try Again</button>
+        </div>
+    </div>
+
+    <script>
+        const $ = id => document.getElementById(id);
+        let interviewDone = false;
+        let sending = false;
+        let isListening = false;
+        let recognition = null;
+        let currentAudio = null;
+        let silenceTimer = null;
+        let lastSpeechTime = 0;
+        let timerInterval = null;
+        let startTime = null;
+        const INTERVIEW_DURATION = 300; // 5 minutes
+        const SILENCE_TIMEOUT = 3000;   // 3 seconds of silence before auto-submit
+
+        // ---- Timer ----
+        function startTimer() {
+            startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const remaining = Math.max(0, INTERVIEW_DURATION - elapsed);
+                const m = Math.floor(remaining / 60);
+                const s = remaining % 60;
+                $('timer').textContent = `${m}:${String(s).padStart(2, '0')}`;
+                if (remaining <= 60) $('timer').style.color = '#e05555';
+                if (remaining <= 0) {
+                    clearInterval(timerInterval);
+                    if (!interviewDone) {
+                        interviewDone = true;
+                        if (recognition && isListening) recognition.stop();
+                        if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+                        $('micBtn').disabled = true;
+                        setTimeout(() => getScore(), 500);
+                    }
+                }
+            }, 1000);
+        }
+
+        // ---- TTS via Edge Neural (backend) ----
+        async function speakText(text) {
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+            $('voiceStatus').textContent = 'Officer is speaking...';
+            $('voiceStatus').className = 'voice-status speaking-text';
+            $('micBtn').disabled = true;
+
+            const bubbles = document.querySelectorAll('.message.officer .bubble');
+            const lastBubble = bubbles[bubbles.length - 1];
+            if (lastBubble) lastBubble.classList.add('speaking');
+
+            try {
+                const res = await fetch('/api/speak', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                return new Promise((resolve) => {
+                    currentAudio = new Audio(`/api/audio/${data.audio_id}`);
+                    currentAudio.playbackRate = 1.0;
+
+                    const done = () => {
+                        if (lastBubble) lastBubble.classList.remove('speaking');
+                        currentAudio = null;
+                        $('micBtn').disabled = false;
+                        if (!interviewDone) {
+                            $('voiceStatus').textContent = 'Tap the mic and speak your answer';
+                            $('voiceStatus').className = 'voice-status';
+                        }
+                        resolve();
+                    };
+
+                    currentAudio.onended = done;
+                    currentAudio.onerror = done;
+                    currentAudio.play().catch(done);
+                });
+            } catch (e) {
+                console.error('TTS error:', e);
+                if (lastBubble) lastBubble.classList.remove('speaking');
+                $('micBtn').disabled = false;
+                $('voiceStatus').textContent = 'Tap the mic and speak your answer';
+                $('voiceStatus').className = 'voice-status';
+            }
+        }
+
+        // ---- Speech Recognition (FIXED — no more cutting off) ----
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        function startListening() {
+            if (!SpeechRecognition) {
+                alert('Speech recognition not supported. Please use Chrome.');
+                return;
+            }
+            if (isListening || sending || interviewDone) return;
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = true;
+            recognition.continuous = true;
+            recognition.maxAlternatives = 1;
+
+            isListening = true;
+            lastSpeechTime = Date.now();
+            $('micBtn').classList.add('listening');
+            $('voiceStatus').textContent = 'Listening... speak now';
+            $('voiceStatus').className = 'voice-status listening-text';
+            $('voiceTranscript').textContent = '';
+
+            let finalTranscript = '';
+            let interimTranscript = '';
+            let restartCount = 0;
+            const MAX_RESTARTS = 5;
+
+            function checkSilence() {
+                clearInterval(silenceTimer);
+                silenceTimer = setInterval(() => {
+                    const silent = Date.now() - lastSpeechTime;
+                    if (finalTranscript.trim() && silent > SILENCE_TIMEOUT) {
+                        // User stopped talking for 3 seconds — submit
+                        clearInterval(silenceTimer);
+                        try { recognition.stop(); } catch(e) {}
+                    }
+                }, 500);
+            }
+
+            recognition.onresult = (event) => {
+                interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const t = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += t + ' ';
+                    } else {
+                        interimTranscript += t;
+                    }
+                    lastSpeechTime = Date.now();
+                }
+                $('voiceTranscript').textContent = (finalTranscript + interimTranscript).trim();
+                $('voiceStatus').textContent = '🔴 Listening... (pause 3s or tap mic to finish)';
+                $('voiceStatus').className = 'voice-status listening-text';
+            };
+
+            recognition.onend = () => {
+                clearInterval(silenceTimer);
+                const text = finalTranscript.trim();
+
+                if (text) {
+                    // Got text — submit it
+                    isListening = false;
+                    $('micBtn').classList.remove('listening');
+                    $('voiceTranscript').textContent = '';
+                    $('voiceStatus').textContent = 'Processing...';
+                    $('voiceStatus').className = 'voice-status';
+                    submitAnswer(text);
+                } else if (restartCount < MAX_RESTARTS && isListening) {
+                    // No text yet but user hasn't manually stopped — restart recognition
+                    restartCount++;
+                    try { recognition.start(); checkSilence(); } catch(e) {
+                        isListening = false;
+                        $('micBtn').classList.remove('listening');
+                        $('voiceStatus').textContent = 'Tap the mic to try again.';
+                        $('voiceStatus').className = 'voice-status';
+                    }
+                } else {
+                    isListening = false;
+                    $('micBtn').classList.remove('listening');
+                    $('voiceStatus').textContent = "Didn't catch that. Tap the mic to try again.";
+                    $('voiceStatus').className = 'voice-status';
+                }
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech') {
+                    // Don't stop — let the onend handler restart
+                    return;
+                }
+                if (event.error === 'aborted') return;
+
+                isListening = false;
+                clearInterval(silenceTimer);
+                $('micBtn').classList.remove('listening');
+                if (event.error === 'not-allowed') {
+                    $('voiceStatus').textContent = 'Microphone access denied. Please allow mic access.';
+                } else {
+                    $('voiceStatus').textContent = 'Error: ' + event.error + '. Tap the mic to retry.';
+                }
+                $('voiceStatus').className = 'voice-status';
+            };
+
+            recognition.start();
+            checkSilence();
+        }
+
+        function stopListening() {
+            if (recognition && isListening) {
+                isListening = false; // Prevent restart in onend
+                clearInterval(silenceTimer);
+                try { recognition.stop(); } catch(e) {}
+            }
+        }
+
+        $('micBtn').addEventListener('click', () => {
+            if (isListening) stopListening();
+            else startListening();
+        });
+
+        // ---- Start interview ----
+        $('startBtn').addEventListener('click', async () => {
+            $('startBtn').disabled = true;
+            $('startBtn').textContent = 'Starting...';
+
+            try {
+                const res = await fetch('/api/start', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ visa_type: 'B1/B2 Tourist/Business' })
+                });
+                const data = await res.json();
+
+                $('setupScreen').style.display = 'none';
+                $('chatScreen').classList.add('active');
+                startTimer();
+
+                addMessage('officer', data.message);
+                await speakText(data.message);
+            } catch (e) {
+                alert('Error starting interview. Make sure the server is running.');
+                $('startBtn').disabled = false;
+                $('startBtn').textContent = 'Begin Interview';
+            }
+        });
+
+        // ---- Submit answer ----
+        async function submitAnswer(text) {
+            if (!text || sending || interviewDone) return;
+            sending = true;
+            $('micBtn').disabled = true;
+
+            addMessage('applicant', text);
+            showTyping();
+
+            try {
+                const res = await fetch('/api/respond', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+
+                hideTyping();
+                addMessage('officer', data.message);
+
+                if (data.done) {
+                    interviewDone = true;
+                    clearInterval(timerInterval);
+                    await speakText(data.message);
+                    setTimeout(() => getScore(), 1500);
+                } else {
+                    await speakText(data.message);
+                }
+            } catch (e) {
+                hideTyping();
+                addMessage('officer', '[Connection error — please try again]');
+            }
+
+            sending = false;
+            $('micBtn').disabled = interviewDone;
+        }
+
+        // ---- End interview ----
+        $('endBtn').addEventListener('click', () => {
+            if (confirm('End the interview and get your score?')) {
+                interviewDone = true;
+                clearInterval(timerInterval);
+                if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+                if (recognition && isListening) { isListening = false; recognition.stop(); }
+                $('micBtn').disabled = true;
+                getScore();
+            }
+        });
+
+        // ---- Get score ----
+        async function getScore() {
+            if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+            $('chatScreen').classList.remove('active');
+            $('scoreScreen').classList.add('active');
+            $('feedbackCard').innerHTML = '<div class="loading-score"><div class="spinner"></div><p>Analyzing your interview...</p></div>';
+
+            try {
+                const res = await fetch('/api/score', { method: 'POST' });
+                const data = await res.json();
+                $('feedbackCard').innerHTML = formatFeedback(data.feedback);
+            } catch (e) {
+                $('feedbackCard').innerHTML = '<p>Error generating feedback.</p>';
+            }
+        }
+
+        function formatFeedback(text) {
+            return text
+                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.+)$/gm, '<h2>$1</h2>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+                .replace(/^---$/gm, '<hr>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function addMessage(type, text) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            const icon = type === 'officer' ? '👔' : '🧑';
+            const label = type === 'officer' ? 'Visa Officer' : 'You';
+            div.innerHTML = `<div class="avatar">${icon}</div><div><div class="label">${label}</div><div class="bubble">${escapeHtml(text)}</div></div>`;
+            $('messages').appendChild(div);
+            $('messages').scrollTop = $('messages').scrollHeight;
+        }
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'typing'; div.id = 'typingIndicator';
+            div.innerHTML = '<div class="avatar">👔</div><div class="typing-dots"><span></span><span></span><span></span></div>';
+            $('messages').appendChild(div);
+            $('messages').scrollTop = $('messages').scrollHeight;
+        }
+
+        function hideTyping() { const el = $('typingIndicator'); if (el) el.remove(); }
+
+        function escapeHtml(text) { const d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
+
+        $('retryBtn').addEventListener('click', () => location.reload());
+    </script>
+</body>
+</html>
