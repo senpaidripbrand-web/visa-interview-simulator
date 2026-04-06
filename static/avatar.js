@@ -4,7 +4,7 @@
  */
 
 // Free Ready Player Me avatar (man in suit). Override via window.AVATAR_URL.
-const RPM_AVATAR_URL = 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb?morphTargets=ARKit,Oculus+Visemes&textureAtlas=1024&pose=A&useDracoMeshCompression=true';
+const RPM_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/avatars/avaturn.glb';
 
 window.avatarInit = async function (el) {
   el.innerHTML = `
@@ -15,7 +15,7 @@ window.avatarInit = async function (el) {
     <div class="avatar-label" style="margin-top:10px;font-size:11px;color:#5b9aff;letter-spacing:0.6px;text-transform:uppercase;text-align:center;">Officer Reynolds · Consular Section</div>
   `;
   try {
-    const mod = await import('https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@1.4/modules/talkinghead.mjs');
+    const mod = await import('https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/modules/talkinghead.mjs');
     const TalkingHead = mod.TalkingHead;
     const node = document.getElementById('th-avatar');
     const head = new TalkingHead(node, {
