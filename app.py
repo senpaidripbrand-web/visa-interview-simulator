@@ -7,6 +7,11 @@ import tempfile
 import uuid
 import time
 import edge_tts
+import requests as _requests
+
+ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_da1a7e939aefd2d8fa90de5c49751baf5a40e3df1823a0bd")
+# "Adam" — deep, mature American male, great for authority figures
+ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
 from flask import Flask, render_template, request, jsonify, session, send_file
 from coaching import get_instant_feedback, get_difficulty_settings
 try:
@@ -802,6 +807,31 @@ async def _generate_speech(text, mp3_path):
     await communicate.save(mp3_path)
 
 
+def _generate_speech_elevenlabs(text, mp3_path):
+    """Try ElevenLabs first; raises on failure so caller can fall back."""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+    payload = {
+        "text": text,
+        "model_id": "eleven_turbo_v2_5",
+        "voice_settings": {
+            "stability": 0.45,
+            "similarity_boost": 0.85,
+            "style": 0.55,
+            "use_speaker_boost": True,
+        },
+    }
+    r = _requests.post(url, json=payload, headers=headers, timeout=30)
+    if r.status_code != 200:
+        raise RuntimeError(f"ElevenLabs {r.status_code}: {r.text[:200]}")
+    with open(mp3_path, "wb") as f:
+        f.write(r.content)
+
+
 @app.route("/api/speak", methods=["POST"])
 def speak():
     data = request.json
@@ -812,12 +842,17 @@ def speak():
     audio_id = str(uuid.uuid4())
     mp3_path = os.path.join(AUDIO_DIR, f"{audio_id}.mp3")
 
+    # Try ElevenLabs first (realistic), fall back to Edge TTS
     try:
-        loop = asyncio.new_event_loop()
-        loop.run_until_complete(_generate_speech(text, mp3_path))
-        loop.close()
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        _generate_speech_elevenlabs(text, mp3_path)
+    except Exception as el_err:
+        print(f"[ElevenLabs failed, falling back to Edge TTS] {el_err}")
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(_generate_speech(text, mp3_path))
+            loop.close()
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
     return jsonify({"audio_id": audio_id})
 
