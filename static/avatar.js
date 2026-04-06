@@ -9,7 +9,8 @@
   let containerEl = null;
 
   // Stable, realistic male officer headshot (free, no auth)
-  const PHOTO_URL = 'https://randomuser.me/api/portraits/men/32.jpg';
+  const PHOTO_URL = 'https://i.pravatar.cc/400?img=60';
+  const FALLBACK_URL = 'https://randomuser.me/api/portraits/men/32.jpg';
 
   function setState(state) {
     if (!containerEl) return;
@@ -22,7 +23,7 @@
     el.innerHTML = `
       <div class="avatar-container" data-state="idle">
         <div class="avatar-frame">
-          <img class="avatar-photo" src="${PHOTO_URL}" alt="Visa Officer" crossorigin="anonymous">
+          <img class="avatar-photo" src="${PHOTO_URL}" alt="Visa Officer" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${FALLBACK_URL}'">
           <div class="avatar-glow"></div>
           <div class="avatar-scan"></div>
         </div>
