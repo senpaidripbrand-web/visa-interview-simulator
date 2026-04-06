@@ -7,3 +7,4 @@ venv/
 *.wav
 *.aiff
 .DS_Store
+static/officer.glb
