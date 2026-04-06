@@ -580,7 +580,7 @@ def index():
 @app.route("/api/start", methods=["POST"])
 def start_interview():
     data = request.json or {}
-    difficulty = data.get("difficulty", "medium")
+    difficulty = "hard"  # Hostile officer — always
     use_uploaded = data.get("use_uploaded", False)
 
     sid = get_sid()

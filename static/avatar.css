@@ -1,177 +1,60 @@
-/* Visa Officer Avatar Component */
+/* Realistic Visa Officer Avatar */
 
 .avatar-container {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 200px;
-  height: 200px;
+  width: 220px;
   position: relative;
 }
 
 .avatar-frame {
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #141b2d 0%, #1a2340 100%);
-  border: 2.5px solid #5b9aff;
   overflow: hidden;
   position: relative;
+  border: 3px solid #5b9aff;
   box-shadow:
-    0 0 20px rgba(91, 154, 255, 0.15),
-    inset 0 0 30px rgba(0, 0, 0, 0.3);
+    0 0 24px rgba(91, 154, 255, 0.25),
+    inset 0 0 30px rgba(0, 0, 0, 0.4);
+  background: #0a0e17;
+  transition: box-shadow 0.4s ease, transform 0.4s ease;
 }
 
-.avatar-svg {
+.avatar-photo {
   width: 100%;
   height: 100%;
+  object-fit: cover;
   display: block;
-}
-
-/* --- State-driven animations --- */
-
-/* Blink animation */
-@keyframes blink {
-  0%, 92%, 100% { transform: scaleY(1); }
-  95% { transform: scaleY(0.05); }
-}
-
-.avatar-container[data-state="idle"] .eye-group {
-  animation: blink 4s ease-in-out infinite;
-}
-
-.avatar-container[data-state="idle"] .eye-group:nth-child(2) {
-  animation-delay: 0.05s;
-}
-
-/* Speaking blink (less frequent) */
-@keyframes blink-speaking {
-  0%, 95%, 100% { transform: scaleY(1); }
-  97% { transform: scaleY(0.05); }
-}
-
-.avatar-container[data-state="speaking"] .eye-group {
-  animation: blink-speaking 5s ease-in-out infinite;
-}
-
-/* Mouth speaking animation */
-@keyframes mouth-speak {
-  0%, 100% { transform: scaleY(1); }
-  15% { transform: scaleY(1.8); }
-  30% { transform: scaleY(0.6); }
-  45% { transform: scaleY(2.2); }
-  60% { transform: scaleY(0.8); }
-  75% { transform: scaleY(1.6); }
-  90% { transform: scaleY(1.1); }
-}
-
-.avatar-container[data-state="speaking"] .mouth-group {
-  animation: mouth-speak 0.45s ease-in-out infinite;
-  transform-origin: center center;
-}
-
-/* Head nod while speaking */
-@keyframes head-nod {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  25% { transform: translateY(1px) rotate(0.3deg); }
-  50% { transform: translateY(1.5px) rotate(-0.2deg); }
-  75% { transform: translateY(0.5px) rotate(0.1deg); }
-}
-
-.avatar-container[data-state="speaking"] .head-group {
-  animation: head-nod 2s ease-in-out infinite;
+  filter: contrast(1.05) saturate(1.05);
   transform-origin: center 60%;
 }
 
-/* Thinking — eyes shift right */
-@keyframes think-eyes {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(3px); }
-  60% { transform: translateX(3px); }
-  80% { transform: translateX(1px); }
+.avatar-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgba(91, 154, 255, 0);
+  transition: box-shadow 0.4s ease;
 }
 
-@keyframes think-blink {
-  0%, 88%, 100% { transform: scaleY(1) translateX(3px); }
-  91% { transform: scaleY(0.05) translateX(3px); }
+.avatar-scan {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(91,154,255,0.7), transparent);
+  top: -10px;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.avatar-container[data-state="thinking"] .eye-group {
-  animation: think-eyes 3s ease-in-out forwards, think-blink 4.5s ease-in-out 3s infinite;
-}
-
-/* Eyebrow raise while thinking */
-@keyframes think-brow {
-  0%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-1.5px); }
-  70% { transform: translateY(-1.5px); }
-}
-
-.avatar-container[data-state="thinking"] .brow-group {
-  animation: think-brow 3s ease-in-out forwards;
-}
-
-/* Thinking head tilt */
-.avatar-container[data-state="thinking"] .head-group {
-  animation: none;
-  transform: rotate(2deg) translateX(1px);
-  transition: transform 0.6s ease;
-}
-
-/* Listening — slight tilt, attentive */
-@keyframes listen-tilt {
-  0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(-2.5deg) translateY(1px); }
-}
-
-.avatar-container[data-state="listening"] .head-group {
-  animation: listen-tilt 4s ease-in-out infinite;
-  transform-origin: center 60%;
-}
-
-@keyframes listen-blink {
-  0%, 90%, 100% { transform: scaleY(1); }
-  93% { transform: scaleY(0.05); }
-}
-
-.avatar-container[data-state="listening"] .eye-group {
-  animation: listen-blink 3.5s ease-in-out infinite;
-}
-
-/* Subtle brow movement for listening */
-@keyframes listen-brow {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-0.8px); }
-}
-
-.avatar-container[data-state="listening"] .brow-group {
-  animation: listen-brow 4s ease-in-out infinite;
-}
-
-/* Idle subtle breathing / micro-movement */
-@keyframes idle-breathe {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(0.5px); }
-}
-
-.avatar-container[data-state="idle"] .head-group {
-  animation: idle-breathe 5s ease-in-out infinite;
-  transform-origin: center 60%;
-}
-
-/* Smooth transitions between states */
-.head-group,
-.eye-group,
-.mouth-group,
-.brow-group {
-  transition: transform 0.4s ease;
-}
-
-/* Status indicator dot */
 .avatar-status {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
+  top: 10px;
+  right: 10px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -181,30 +64,94 @@
   transition: background 0.3s ease;
 }
 
-.avatar-container[data-state="speaking"] .avatar-status {
-  background: #4caf50;
-  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+.avatar-label {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #5b9aff;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  text-align: center;
+  opacity: 0.85;
 }
 
-.avatar-container[data-state="thinking"] .avatar-status {
-  background: #ff9800;
-  box-shadow: 0 0 6px rgba(255, 152, 0, 0.4);
+/* ---- Idle: gentle breathing ---- */
+@keyframes breathe {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.012) translateY(-0.5px); }
+}
+.avatar-container[data-state="idle"] .avatar-photo {
+  animation: breathe 4.5s ease-in-out infinite;
 }
 
-.avatar-container[data-state="listening"] .avatar-status {
-  background: #5b9aff;
-  box-shadow: 0 0 6px rgba(91, 154, 255, 0.5);
+/* ---- Speaking: micro head bob + pulsing glow ---- */
+@keyframes speak-bob {
+  0%, 100% { transform: scale(1.02) translateY(0) rotate(0deg); }
+  20% { transform: scale(1.025) translateY(-0.6px) rotate(0.3deg); }
+  40% { transform: scale(1.015) translateY(0.4px) rotate(-0.2deg); }
+  60% { transform: scale(1.028) translateY(-0.4px) rotate(0.2deg); }
+  80% { transform: scale(1.018) translateY(0.3px) rotate(-0.1deg); }
 }
+@keyframes speak-glow {
+  0%, 100% { box-shadow: 0 0 18px rgba(76, 175, 80, 0.35), inset 0 0 30px rgba(0,0,0,0.4); }
+  50%      { box-shadow: 0 0 36px rgba(76, 175, 80, 0.7),  inset 0 0 40px rgba(0,0,0,0.4); }
+}
+.avatar-container[data-state="speaking"] .avatar-photo {
+  animation: speak-bob 0.42s ease-in-out infinite;
+}
+.avatar-container[data-state="speaking"] .avatar-frame {
+  animation: speak-glow 1s ease-in-out infinite;
+  border-color: #4caf50;
+}
+
+/* ---- Thinking: warm glow + tilt ---- */
+@keyframes think-tilt {
+  0%, 100% { transform: rotate(2deg) scale(1.01); }
+  50% { transform: rotate(2.5deg) scale(1.015); }
+}
+@keyframes think-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(255, 152, 0, 0.35), inset 0 0 30px rgba(0,0,0,0.4); }
+  50%      { box-shadow: 0 0 32px rgba(255, 152, 0, 0.6),  inset 0 0 40px rgba(0,0,0,0.4); }
+}
+.avatar-container[data-state="thinking"] .avatar-photo {
+  animation: think-tilt 3s ease-in-out infinite;
+}
+.avatar-container[data-state="thinking"] .avatar-frame {
+  animation: think-glow 2s ease-in-out infinite;
+  border-color: #ff9800;
+}
+
+/* ---- Listening: attentive lean + scan line ---- */
+@keyframes listen-lean {
+  0%, 100% { transform: rotate(-1.5deg) scale(1.015); }
+  50% { transform: rotate(-2.5deg) translateY(-0.5px) scale(1.02); }
+}
+@keyframes scan-down {
+  0%   { top: -10px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 210px; opacity: 0; }
+}
+.avatar-container[data-state="listening"] .avatar-photo {
+  animation: listen-lean 3.5s ease-in-out infinite;
+}
+.avatar-container[data-state="listening"] .avatar-frame {
+  border-color: #5b9aff;
+  box-shadow: 0 0 28px rgba(91,154,255,0.55), inset 0 0 30px rgba(0,0,0,0.4);
+}
+.avatar-container[data-state="listening"] .avatar-scan {
+  animation: scan-down 2s linear infinite;
+}
+
+/* ---- Status dot colors ---- */
+.avatar-container[data-state="speaking"] .avatar-status { background: #4caf50; box-shadow: 0 0 8px rgba(76,175,80,0.7); }
+.avatar-container[data-state="thinking"] .avatar-status { background: #ff9800; box-shadow: 0 0 8px rgba(255,152,0,0.6); }
+.avatar-container[data-state="listening"] .avatar-status { background: #5b9aff; box-shadow: 0 0 8px rgba(91,154,255,0.7); }
 
 @keyframes status-pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
 }
-
-.avatar-container[data-state="speaking"] .avatar-status {
+.avatar-container[data-state="speaking"] .avatar-status,
+.avatar-container[data-state="listening"] .avatar-status {
   animation: status-pulse 1.2s ease-in-out infinite;
-}
-
-.avatar-container[data-state="thinking"] .avatar-status {
-  animation: status-pulse 2s ease-in-out infinite;
 }

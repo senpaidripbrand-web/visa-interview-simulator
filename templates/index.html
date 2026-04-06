@@ -149,24 +149,6 @@
         <!-- Setup Screen -->
         <div class="setup" id="setupScreen">
             <div class="setup-card">
-                <h3>Difficulty</h3>
-                <div class="difficulty-row">
-                    <div class="diff-btn" data-diff="easy">
-                        <div class="name">Easy</div>
-                        <div class="desc">Friendly officer</div>
-                    </div>
-                    <div class="diff-btn selected" data-diff="medium">
-                        <div class="name">Medium</div>
-                        <div class="desc">Realistic</div>
-                    </div>
-                    <div class="diff-btn" data-diff="hard">
-                        <div class="name">Hard</div>
-                        <div class="desc">Hostile officer</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="setup-card">
                 <h3>Profile (Optional — defaults to Ashish)</h3>
                 <label class="upload-area" id="uploadArea">
                     <div class="icon" id="uploadIcon">📄</div>
@@ -187,7 +169,7 @@
         <!-- Chat Screen -->
         <div class="chat-container" id="chatScreen">
             <div class="top-bar">
-                <div class="difficulty-badge" id="diffBadge">MEDIUM</div>
+                <div class="difficulty-badge" id="diffBadge">HOSTILE</div>
                 <div class="timer" id="timer">5:00</div>
                 <div class="applicant-badge" id="applicantBadge">Ashish</div>
             </div>
@@ -233,20 +215,11 @@
         let lastSpeechTime = 0;
         let timerInterval = null;
         let startTime = null;
-        let selectedDifficulty = 'medium';
+        let selectedDifficulty = 'hard';
         let useUploaded = false;
         let uploadedName = null;
         const INTERVIEW_DURATION = 300;
         const SILENCE_TIMEOUT = 3000;
-
-        // ---- Difficulty selector ----
-        document.querySelectorAll('.diff-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));
-                btn.classList.add('selected');
-                selectedDifficulty = btn.dataset.diff;
-            });
-        });
 
         // ---- DS-160 upload ----
         $('ds160File').addEventListener('change', async (e) => {
