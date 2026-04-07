@@ -16,7 +16,13 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJg
 # D-ID — talking head video generation from a still photo
 DID_API_KEY = os.environ.get("DID_API_KEY", "c2VucGFpZHJpcGJyYW5kQGdtYWlsLmNvbQ:eJqBK0-M5KWGVZ_kRroTO")
 DID_SOURCE_URL = os.environ.get("DID_SOURCE_URL", "https://cdn.jsdelivr.net/gh/senpaidripbrand-web/visa-interview-simulator@main/static/officer.png")
-DID_TALKS_CACHE = {}  # text -> result_url cache
+DID_TALKS_CACHE = {}  # text -> result_url cache (in-memory)
+import threading as _threading
+import hashlib as _hashlib
+TALKS_DIR = os.path.join(os.path.dirname(__file__), "audio_cache", "talks")
+os.makedirs(TALKS_DIR, exist_ok=True)
+_DID_LOCKS = {}  # per-text locks to avoid duplicate generation
+_DID_LOCKS_LOCK = _threading.Lock()
 from flask import Flask, render_template, request, jsonify, session, send_file
 from coaching import get_instant_feedback, get_difficulty_settings
 try:
@@ -885,8 +891,12 @@ def _elevenlabs_with_timestamps(text):
     return audio_b64, words, wtimes, wdurations
 
 
+DID_DISABLED = True  # D-ID free credits exhausted — skip video path, use ElevenLabs voice only
+
 def _did_create_talk(text):
     """Create a D-ID talking-head video from the officer photo. Returns mp4 URL."""
+    if DID_DISABLED:
+        raise RuntimeError("D-ID disabled (credits exhausted)")
     if text in DID_TALKS_CACHE:
         return DID_TALKS_CACHE[text]
 
