@@ -91,6 +91,25 @@
         .coaching.okay { background: #1f1a0d; border-left-color: #f5b800; color: #d8c898; }
         .coaching.weak { background: #1f0d0d; border-left-color: #e05555; color: #d89898; }
         .coaching .emoji { font-size: 16px; margin-right: 6px; }
+        .rubric-card {
+            background: #0e1626; border: 1px solid #1e2a44; border-left: 3px solid #5b9aff;
+            border-radius: 10px; padding: 12px 14px; margin: 8px 36px; font-size: 12px;
+            color: #c8d4e8; animation: rubricIn 0.35s ease-out;
+        }
+        @keyframes rubricIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .rubric-card.good { border-left-color: #4caf50; }
+        .rubric-card.mid  { border-left-color: #ff9800; }
+        .rubric-card.bad  { border-left-color: #ef4444; }
+        .rb-head { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+        .rb-score b { color: #fff; font-size: 14px; }
+        .rb-fillers { color: #889; }
+        .rb-row { display: flex; align-items: center; gap: 8px; margin: 4px 0; }
+        .rb-lbl { width: 84px; color: #889; font-size: 11px; }
+        .rb-bar { flex: 1; height: 6px; background: #1a2238; border-radius: 3px; overflow: hidden; }
+        .rb-fill { height: 100%; transition: width 0.5s ease; }
+        .rb-num { width: 38px; text-align: right; font-size: 11px; color: #aab; font-variant-numeric: tabular-nums; }
+        .rb-tip { margin-top: 8px; padding-top: 8px; border-top: 1px solid #1e2a44; color: #b8c4d8; }
+        .rb-flags { margin-top: 6px; color: #ef4444; font-size: 11px; }
 
         /* Voice area */
         .voice-area { padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -481,7 +500,11 @@
                 const data = await res.json();
                 hideTyping();
 
-                // Show coaching feedback
+                // Show per-question rubric breakdown
+                if (data.inline_coaching) {
+                    addRubricCard(data.inline_coaching, data.total_fillers);
+                }
+                // Legacy coaching tip (small)
                 if (data.coaching) {
                     addCoaching(data.coaching);
                 }
@@ -549,6 +572,37 @@
             div.className = `message ${type}`;
             const icon = type === 'officer' ? '👔' : '🧑';
             div.innerHTML = `<div class="avatar-mini">${icon}</div><div class="bubble">${escapeHtml(text)}</div>`;
+            $('messages').appendChild(div);
+            $('messages').scrollTop = $('messages').scrollHeight;
+        }
+
+        function addRubricCard(ic, totalFillers) {
+            const div = document.createElement('div');
+            div.className = 'rubric-card';
+            const score = ic.last_answer_score; // 0-10
+            const tone = score >= 8 ? 'good' : score >= 6 ? 'mid' : 'bad';
+            div.classList.add(tone);
+            const r = ic.rubric || {};
+            const bar = (label, val) => {
+                const pct = Math.max(0, Math.min(100, val * 10));
+                const c = val >= 8 ? '#4caf50' : val >= 6 ? '#ff9800' : '#ef4444';
+                return `<div class="rb-row"><span class="rb-lbl">${label}</span><div class="rb-bar"><div class="rb-fill" style="width:${pct}%;background:${c}"></div></div><span class="rb-num">${val}/10</span></div>`;
+            };
+            const flags = (ic.red_flags && ic.red_flags.length)
+                ? `<div class="rb-flags">⚠ ${ic.red_flags.map(escapeHtml).join(' · ')}</div>` : '';
+            div.innerHTML = `
+                <div class="rb-head">
+                  <span class="rb-score">Question Score: <b>${score}/10</b></span>
+                  <span class="rb-fillers">Fillers (total): ${totalFillers || 0}</span>
+                </div>
+                ${bar('Clarity', r.clarity ?? 0)}
+                ${bar('Confidence', r.confidence ?? 0)}
+                ${bar('Specificity', r.specificity ?? 0)}
+                ${bar('Relevance', r.relevance ?? 0)}
+                ${bar('Honesty', r.honesty ?? 0)}
+                ${ic.tip ? `<div class="rb-tip">💡 ${escapeHtml(ic.tip)}</div>` : ''}
+                ${flags}
+            `;
             $('messages').appendChild(div);
             $('messages').scrollTop = $('messages').scrollHeight;
         }
