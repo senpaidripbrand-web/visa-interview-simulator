@@ -41,6 +41,46 @@ os.makedirs(AUDIO_DIR, exist_ok=True)
 SESSIONS = {}
 
 # ---------------------------------------------------------------------------
+# Hardcoded Ashish profile (used for honesty/contradiction detection)
+# NOTE: The existing question pool is FIFA/Ministry-themed and was kept intact
+# (it already deeply references Ashish). This dict is the formal spec'd profile
+# referenced by the rubric (honesty/contradictions) and shown in the UI chip.
+# ---------------------------------------------------------------------------
+ASHISH_PROFILE = {
+    "full_name": "Ashish Kumar",
+    "nationality": "Indian",
+    "passport": "Z1234567",
+    "dob": "1995-06-15",
+    "visa_type": "B1/B2 Tourist",
+    "purpose": "Tourism and visiting family",
+    "duration": "14 days",
+    "destination": "New York, Los Angeles, Las Vegas",
+    "employer": "Infosys Limited, Bangalore",
+    "position": "Senior Software Engineer",
+    "salary_inr": "1,800,000 per year",
+    "years_at_job": "4 years",
+    "sponsor": "Self-funded",
+    "funds_inr": "2,500,000 in savings",
+    "ties_to_india": "Parents, sister, apartment in Bangalore, full-time job",
+    "previous_us_travel": "Never visited US before",
+    "previous_visa_refusals": "None",
+    "family_in_us": "Cousin in New Jersey (US citizen)",
+    "return_date": "Confirmed return ticket booked",
+    "marital_status": "Single",
+}
+
+FILLER_WORDS = ["um", "uh", "like", "you know", "maybe", "i think", "i guess", "sort of", "kind of", "uhh", "umm"]
+
+REJECTION_REASONS = {
+    "intent_to_immigrate": {"code": "214(b)", "description": "Failure to overcome presumption of immigrant intent"},
+    "contradiction": {"code": "Misrepresentation (6 C 1)", "description": "Statements inconsistent with DS-160 / profile"},
+    "evasive": {"code": "214(b)", "description": "Insufficient credibility — evasive answers"},
+    "weak_ties": {"code": "214(b)", "description": "Insufficient ties to home country"},
+    "missing_info": {"code": "214(b)", "description": "Failure to articulate clear purpose"},
+    "financial_inconsistency": {"code": "221(g)", "description": "Financial documentation inconsistent"},
+}
+
+# ---------------------------------------------------------------------------
 # Ashish's REAL profile
 # ---------------------------------------------------------------------------
 # Job: Ministry of Communications, Central Govt, since 2020 (6 yrs)
@@ -241,24 +281,36 @@ ALL_QUESTIONS = [
 
 OPENING = "Good morning. Passport and DS-160 confirmation, please."
 
-# Officer reactions
-GOOD_REACTIONS = ["Okay.", "Alright.", "Fine.", "Mm-hmm.", "Got it."]
-NEUTRAL_REACTIONS = ["Okay...", "Hmm.", "Right...", "I see...", "Alright..."]
+# Officer reactions — SKEPTICAL HOSTILE PERSONA ONLY
+GOOD_REACTIONS = [
+    "Hmm.",
+    "Is that so?",
+    "Noted.",
+    "We'll see.",
+    "I'm listening.",
+]
+NEUTRAL_REACTIONS = [
+    "Hmm.",
+    "Is that so?",
+    "I'm not convinced.",
+    "Explain further.",
+    "Go on.",
+]
 SKEPTICAL_REACTIONS = [
     "That doesn't quite add up.",
-    "I'm not entirely convinced.",
-    "Hmm, okay.",
+    "I'm not convinced.",
+    "Hmm. Convenient.",
     "I've heard that before, Ashish.",
-    "Look, I need you to be straight with me.",
+    "Look, be straight with me.",
     "See, that's the concern.",
-    "Two other officers weren't convinced by that either.",
+    "Two other officers weren't convinced either.",
 ]
 PROBE_REACTIONS = [
-    "That's too vague. Be specific.",
+    "Too vague. Be specific.",
     "I need more than that.",
-    "You've been through this twice. You should be more prepared.",
-    "Specifics. Names, numbers, dates.",
-    "Come on, Ashish. You know what I'm asking.",
+    "You've been through this twice. Be prepared.",
+    "Names. Numbers. Dates.",
+    "Come on, Ashish.",
 ]
 CLOSING_LINES = [
     "Alright, I think I've heard enough. That'll be all, Ashish. You may step aside.",
@@ -338,65 +390,161 @@ QUESTION_KEYWORDS = {
 }
 
 
+def detect_red_flags(answer, question_key=None):
+    """Return a list of red flag tags detected in the answer."""
+    flags = []
+    lower = answer.lower()
+
+    immigrate_terms = ["stay there", "settle", "green card", "job in us", "job in the us",
+                       "marry", "permanent residency", "find work in", "live in america", "live in the us"]
+    if any(t in lower for t in immigrate_terms):
+        flags.append("intent_to_immigrate")
+
+    evasive_terms = ["don't know", "dont know", "not sure", "i'm not sure", "no idea", "can't remember"]
+    if any(t in lower for t in evasive_terms):
+        flags.append("evasive")
+
+    # Contradictions with ASHISH_PROFILE.employer
+    if re.search(r'\b(google|microsoft|amazon|tcs|wipro|tesla|meta|apple)\b', lower) and "infosys" not in lower:
+        if question_key in ("employment", "role_detail", "income", None):
+            flags.append("contradiction")
+
+    if re.search(r"(no money|broke|can't afford|cant afford|no savings|empty account)", lower):
+        flags.append("financial_inconsistency")
+
+    if question_key == "purpose" and len(answer.split()) < 5:
+        flags.append("missing_info")
+
+    return flags
+
+
+def count_filler_words(answer):
+    lower = " " + answer.lower() + " "
+    count = 0
+    for fw in FILLER_WORDS:
+        count += lower.count(" " + fw + " ")
+    return count
+
+
 def analyze_answer(answer, question_key=None):
-    """Score an answer based on the SPECIFIC question that was asked."""
+    """Score an answer across multiple rubric dimensions.
+
+    Returns a dict with: clarity, confidence, specificity, relevance, honesty,
+    overall (0-100 weighted), red_flags, filler_words, inline_feedback.
+    """
     lower = answer.lower()
     words = answer.split()
     wc = len(words)
 
-    # Base score from answer length (longer = more detailed = better)
-    if wc < 3:
-        score = 10
-    elif wc < 6:
-        score = 25
-    elif wc < 10:
-        score = 35
-    elif wc < 15:
-        score = 45
+    # Clarity
+    if wc <= 1:
+        clarity = 2
+    elif wc < 4:
+        clarity = 4
+    elif wc < 8:
+        clarity = 6
     elif wc < 25:
-        score = 55
-    elif wc < 40:
-        score = 65
+        clarity = 8
+    elif wc < 50:
+        clarity = 9
     else:
-        score = 70
+        clarity = 6
 
-    # --- Question-specific keyword matching ---
+    # Confidence (filler-word inverse)
+    fillers = count_filler_words(answer)
+    if fillers == 0:
+        confidence = 10
+    elif fillers == 1:
+        confidence = 8
+    elif fillers == 2:
+        confidence = 6
+    elif fillers <= 4:
+        confidence = 4
+    else:
+        confidence = 3
+    confident_phrases = ['i have', 'i can show', 'confirmed', 'booked', 'i will return',
+                         'absolutely', 'definitely', 'every time', 'always']
+    if any(c in lower for c in confident_phrases):
+        confidence = min(10, confidence + 1)
+
+    # Specificity
+    spec_score = 3
+    if re.search(r'\d', answer):
+        spec_score += 3
+    if re.search(r'(lakh|crore|\$|rupee|usd|inr|dollars?)', lower):
+        spec_score += 2
+    if re.search(r'(january|february|march|april|may|june|july|august|september|october|november|december|\d{1,2}/\d{1,2}|\d{4})', lower):
+        spec_score += 2
+    proper_nouns = len([w for w in words[1:] if w and w[0].isupper()])
+    if proper_nouns >= 2:
+        spec_score += 2
+    specificity = min(10, spec_score)
+
+    # Relevance
     if question_key and question_key in QUESTION_KEYWORDS:
         relevant_kw = QUESTION_KEYWORDS[question_key]
         hits = sum(1 for kw in relevant_kw if kw.lower() in lower)
-        total = len(relevant_kw)
-        # What % of relevant keywords did they mention?
-        if total > 0:
-            hit_ratio = hits / total
-            if hit_ratio >= 0.4:
-                score += 25  # Excellent — covered many key points
-            elif hit_ratio >= 0.25:
-                score += 15  # Good — hit some key points
-            elif hit_ratio >= 0.1:
-                score += 5   # Okay — mentioned a few things
-            # else: no bonus — missed the point
+        total = len(relevant_kw) or 1
+        ratio = hits / total
+        if ratio >= 0.4:
+            relevance = 10
+        elif ratio >= 0.25:
+            relevance = 8
+        elif ratio >= 0.1:
+            relevance = 6
+        elif hits > 0:
+            relevance = 4
+        else:
+            relevance = 2
+    else:
+        relevance = 6
 
-    # --- Contains specific numbers/dates/facts ---
-    if re.search(r'\d', answer):
-        score += 5
-    if re.search(r'(lakh|crore|\$|rupee|usd|inr)', lower):
-        score += 5
+    # Honesty
+    red_flags = detect_red_flags(answer, question_key)
+    if "contradiction" in red_flags:
+        honesty = 0
+    elif "evasive" in red_flags:
+        honesty = 5
+    else:
+        honesty = 9
 
-    # --- Confident language ---
-    confident = ['i have', 'i can show', 'i can prove', 'here is', 'confirmed',
-                 'booked', 'i will return', 'permanent', 'i own', 'absolutely',
-                 'definitely', 'every single time', 'always']
-    conf_hits = sum(1 for c in confident if c in lower)
-    score += min(15, conf_hits * 5)
+    overall_10 = (clarity * 0.15 + confidence * 0.15 + specificity * 0.20 +
+                  relevance * 0.25 + honesty * 0.25)
+    overall_100 = round(overall_10 * 10)
 
-    # --- Vague/weak language (penalize) ---
-    vague = ['maybe', 'i think', 'probably', 'not sure', 'i guess', 'kind of',
-             'sort of', "don't know", "dont know", 'umm', 'uhh', 'i hope',
-             "i'm not sure", 'perhaps']
-    vague_hits = sum(1 for v in vague if v in lower)
-    score -= vague_hits * 12
+    if "contradiction" in red_flags:
+        tip = "That contradicts your DS-160 — stick to the truth."
+    elif "evasive" in red_flags:
+        tip = "Don't be evasive. Give a clear, direct answer."
+    elif relevance <= 4:
+        tip = "Off-topic — answer the actual question with specifics."
+    elif specificity <= 4:
+        tip = "Too vague — add concrete numbers, dates, or names."
+    elif confidence <= 4:
+        tip = f"{fillers} filler words detected. Speak with conviction."
+    elif clarity <= 4:
+        tip = "Too short — give a complete answer in 1-2 sentences."
+    elif overall_100 >= 80:
+        tip = "Strong answer. Keep that tone."
+    else:
+        tip = "Acceptable. Tighten it with one specific detail."
 
-    return max(5, min(100, score))
+    return {
+        "clarity": clarity,
+        "confidence": confidence,
+        "specificity": specificity,
+        "relevance": relevance,
+        "honesty": honesty,
+        "overall": overall_100,
+        "red_flags": red_flags,
+        "filler_words": fillers,
+        "inline_feedback": tip,
+    }
+
+
+def overall_score(answer, question_key=None):
+    """Backward-compat helper that returns just the overall int score."""
+    return analyze_answer(answer, question_key)["overall"]
 
 
 def get_reaction(score):
@@ -597,18 +745,12 @@ def index():
 def start_interview():
     data = request.json or {}
     difficulty = "hard"  # Hostile officer — always
-    use_uploaded = data.get("use_uploaded", False)
 
     sid = get_sid()
 
-    # Check for uploaded DS-160 questions in session
-    if use_uploaded and sid in SESSIONS and SESSIONS[sid].get("uploaded_questions"):
-        questions = SESSIONS[sid]["uploaded_questions"]
-        random.shuffle(questions)
-        applicant_name = SESSIONS[sid].get("uploaded_name", "applicant")
-    else:
-        questions = build_session_questions()
-        applicant_name = "Ashish"
+    # DS-160 upload removed — always use the hardcoded Ashish profile.
+    questions = build_session_questions()
+    applicant_name = "Ashish"
 
     diff_settings = get_difficulty_settings(difficulty)
     max_q = diff_settings["max_questions"]
@@ -628,53 +770,17 @@ def start_interview():
         "follow_up_done_for": set(),
         "difficulty": difficulty,
         "applicant_name": applicant_name,
+        "profile": ASHISH_PROFILE,
+        "total_fillers": 0,
     }
 
-    return jsonify({"message": OPENING, "done": False, "difficulty": difficulty, "applicant": applicant_name})
-
-
-@app.route("/api/upload_ds160", methods=["POST"])
-def upload_ds160():
-    """Parse uploaded DS-160 PDF and generate personalized questions."""
-    if not DS160_AVAILABLE:
-        return jsonify({"error": "DS-160 parser not available"}), 500
-
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-
-    file = request.files["file"]
-    if not file.filename.lower().endswith(".pdf"):
-        return jsonify({"error": "Please upload a PDF file"}), 400
-
-    # Save temporarily
-    tmp_path = os.path.join(AUDIO_DIR, f"{uuid.uuid4()}.pdf")
-    file.save(tmp_path)
-
-    try:
-        profile = extract_profile(tmp_path)
-        if not profile:
-            return jsonify({"error": "Could not parse the PDF. Make sure it's a valid DS-160 form."}), 400
-
-        questions = generate_personalized_questions(profile)
-
-        sid = get_sid()
-        if sid not in SESSIONS:
-            SESSIONS[sid] = {}
-        SESSIONS[sid]["uploaded_questions"] = questions
-        SESSIONS[sid]["uploaded_profile"] = profile
-        SESSIONS[sid]["uploaded_name"] = profile.get("given_name", "applicant").split()[0] if profile.get("given_name") else "applicant"
-
-        return jsonify({
-            "success": True,
-            "name": SESSIONS[sid]["uploaded_name"],
-            "questions_count": len(questions),
-            "fields_extracted": {k: v for k, v in profile.items() if k != "raw_text" and v},
-        })
-    finally:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+    return jsonify({
+        "message": OPENING,
+        "done": False,
+        "difficulty": difficulty,
+        "applicant": applicant_name,
+        "profile": ASHISH_PROFILE,
+    })
 
 
 @app.route("/api/respond", methods=["POST"])
@@ -696,32 +802,38 @@ def respond():
     follow_up_done_for = s.get("follow_up_done_for", set())
     difficulty = s.get("difficulty", "medium")
 
-    score = 50  # default
+    score = 50
+    rubric = None
 
-    # --- Record the answer ---
     if pending_follow_up:
-        # Follow-up answer — score using the same question key as the parent
         prev_idx = max(0, current_q - 1)
         parent_key = questions[prev_idx]["key"] if prev_idx < len(questions) else None
-        score = analyze_answer(user_message, question_key=parent_key)
+        rubric = analyze_answer(user_message, question_key=parent_key)
+        score = rubric["overall"]
         if answers:
             answers[-1]["follow_up_answer"] = user_message
             answers[-1]["score"] = (answers[-1]["score"] + score) // 2
+            answers[-1].setdefault("red_flags", []).extend(rubric["red_flags"])
         pending_follow_up = None
     elif got_opening:
         if current_q < len(questions):
             q = questions[current_q]
-            score = analyze_answer(user_message, question_key=q["key"])
+            rubric = analyze_answer(user_message, question_key=q["key"])
+            score = rubric["overall"]
             answers.append({
                 "question": q["text"],
                 "answer": user_message,
                 "score": score,
                 "category": q.get("category", "purpose"),
                 "key": q["key"],
+                "rubric": {k: rubric[k] for k in ("clarity", "confidence", "specificity", "relevance", "honesty")},
+                "red_flags": list(rubric["red_flags"]),
+                "filler_words": rubric["filler_words"],
             })
             asked_keys.add(q["key"])
         else:
-            score = analyze_answer(user_message)
+            rubric = analyze_answer(user_message)
+            score = rubric["overall"]
         current_q += 1
 
     # --- Helper: find next un-asked question (skip duplicates) ---
@@ -799,18 +911,41 @@ def respond():
     s["last_asked_key"] = last_asked_key
     s["follow_up_done_for"] = follow_up_done_for
 
-    # Generate coaching feedback for the answer just given
     coaching = None
-    if got_opening and user_message:
-        # Determine which question this answer was for
-        if pending_follow_up is None and current_q > 0:
-            # Just answered a regular question — score the previous q
-            prev_idx = max(0, current_q - 1)
-            if prev_idx < len(questions):
-                q_key = questions[prev_idx]["key"]
+    if got_opening and user_message and current_q > 0:
+        prev_idx = max(0, current_q - 1)
+        if prev_idx < len(questions):
+            q_key = questions[prev_idx]["key"]
+            try:
                 coaching = get_instant_feedback(user_message, q_key, score)
+            except Exception:
+                coaching = None
 
-    return jsonify({"message": officer_msg, "done": done, "coaching": coaching, "score": score})
+    inline_coaching = None
+    if rubric is not None:
+        inline_coaching = {
+            "last_answer_score": round(rubric["overall"] / 10, 1),
+            "tip": rubric["inline_feedback"],
+            "red_flags": rubric["red_flags"],
+            "rubric": {
+                "clarity": rubric["clarity"],
+                "confidence": rubric["confidence"],
+                "specificity": rubric["specificity"],
+                "relevance": rubric["relevance"],
+                "honesty": rubric["honesty"],
+            },
+        }
+
+    s["total_fillers"] = s.get("total_fillers", 0) + (rubric["filler_words"] if rubric else 0)
+
+    return jsonify({
+        "message": officer_msg,
+        "done": done,
+        "coaching": coaching,
+        "inline_coaching": inline_coaching,
+        "total_fillers": s["total_fillers"],
+        "score": score,
+    })
 
 
 async def _generate_speech(text, mp3_path):
@@ -1067,6 +1202,70 @@ def get_audio(audio_id):
     return response
 
 
+def build_rubric_report(answers):
+    """Build the rubric/red-flag/rejection-reason report dict."""
+    dims = ["clarity", "confidence", "specificity", "relevance", "honesty"]
+    sums = {d: 0.0 for d in dims}
+    n = 0
+    all_red_flags = []
+    rejection_reasons = []
+    seen_reasons = set()
+    strengths = []
+    weaknesses = []
+
+    for i, ans in enumerate(answers, 1):
+        rub = ans.get("rubric") or {}
+        if rub:
+            for d in dims:
+                sums[d] += rub.get(d, 0)
+            n += 1
+        for rf in ans.get("red_flags", []):
+            all_red_flags.append({"flag": rf, "answer_index": i, "question": ans.get("question", "")})
+            if rf not in seen_reasons and rf in REJECTION_REASONS:
+                seen_reasons.add(rf)
+                rejection_reasons.append({
+                    "code": REJECTION_REASONS[rf]["code"],
+                    "description": REJECTION_REASONS[rf]["description"],
+                    "triggered_by": f"answer #{i}",
+                })
+        sc = ans.get("score", 0)
+        if sc >= 70:
+            strengths.append(ans.get("question", ""))
+        elif sc < 40:
+            weaknesses.append(ans.get("question", ""))
+
+    rubric_avg = {d: round(sums[d] / n, 1) if n else 0 for d in dims}
+    overall = 0
+    if n:
+        overall = round((rubric_avg["clarity"] * 0.15 + rubric_avg["confidence"] * 0.15 +
+                         rubric_avg["specificity"] * 0.20 + rubric_avg["relevance"] * 0.25 +
+                         rubric_avg["honesty"] * 0.25) * 10)
+
+    if overall >= 75:
+        verdict = "LIKELY APPROVAL"
+    elif overall >= 55:
+        verdict = "BORDERLINE"
+    else:
+        verdict = "LIKELY DENIAL"
+
+    weak_str = "; ".join(d for d, v in rubric_avg.items() if v < 6) or "none"
+    coach_summary = (
+        f"Overall {overall}/100 — {verdict}. Weak dimensions: {weak_str}. "
+        f"{len(all_red_flags)} red flag(s) detected."
+    )
+
+    return {
+        "overall_score": overall,
+        "verdict": verdict,
+        "rubric_avg": rubric_avg,
+        "red_flags_summary": all_red_flags,
+        "rejection_reasons": rejection_reasons,
+        "strengths": strengths[:5],
+        "weaknesses": weaknesses[:5],
+        "coach_summary": coach_summary,
+    }
+
+
 @app.route("/api/score", methods=["POST"])
 def score():
     sid = get_sid()
@@ -1076,8 +1275,13 @@ def score():
     if not answers:
         return jsonify({"feedback": "No answers were recorded. Please try the interview again."})
 
-    report = generate_score_report(answers, "B1/B2")
-    return jsonify({"feedback": report})
+    feedback_md = generate_score_report(answers, "B1/B2")
+    report = build_rubric_report(answers)
+    return jsonify({
+        "feedback": feedback_md,
+        "report": report,
+        "total_fillers": s.get("total_fillers", 0),
+    })
 
 
 if __name__ == "__main__":

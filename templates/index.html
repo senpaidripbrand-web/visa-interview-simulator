@@ -157,13 +157,15 @@
         <!-- Setup Screen -->
         <div class="setup" id="setupScreen">
             <div class="setup-card">
-                <h3>Profile (Optional — defaults to Ashish)</h3>
-                <label class="upload-area" id="uploadArea">
-                    <div class="icon" id="uploadIcon">📄</div>
-                    <div class="label" id="uploadLabel">Upload your DS-160 (PDF)</div>
-                    <div class="hint" id="uploadHint">Or skip — defaults to Ashish's FIFA case</div>
-                    <input type="file" id="ds160File" accept=".pdf">
-                </label>
+                <h3>Applicant</h3>
+                <div class="profile-chip">
+                    <span class="chip-name">Ashish Kumar</span>
+                    <span class="chip-sep">·</span>
+                    <span>B1/B2</span>
+                    <span class="chip-sep">·</span>
+                    <span>India</span>
+                </div>
+                <p style="font-size:12px;color:#778;margin-top:10px;">Hostile officer · Skeptical persona · 5-minute interview</p>
             </div>
 
             <button class="start-btn" id="startBtn">Begin Interview</button>
@@ -374,7 +376,7 @@
             if (currentAudio) { currentAudio.pause(); currentAudio = null; }
 
             recognition = new SpeechRecognition();
-            recognition.lang = 'en-US';
+            recognition.lang = 'en-IN';
             recognition.interimResults = true;
             recognition.continuous = true;
             recognition.maxAlternatives = 1;
