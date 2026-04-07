@@ -891,10 +891,55 @@ def _elevenlabs_with_timestamps(text):
     return audio_b64, words, wtimes, wdurations
 
 
-DID_DISABLED = True  # D-ID free credits exhausted — skip video path, use ElevenLabs voice only
+DID_DISABLED = True  # D-ID free credits exhausted — using SadTalker on Colab instead
+
+# --- SadTalker (Colab + ngrok) config ---
+SADTALKER_URL = os.environ.get("SADTALKER_URL", "https://vowelly-jestful-kandy.ngrok-free.dev")
+SADTALKER_SECRET = os.environ.get("SADTALKER_SECRET", "visa-officer-secret-2026")
+
+def _sadtalker_create_talk(text):
+    """Call Colab SadTalker server, save mp4 to disk, return local URL."""
+    key = _hashlib.md5(text.encode("utf-8")).hexdigest()
+    fname = f"{key}.mp4"
+    fpath = os.path.join(TALKS_DIR, fname)
+    if os.path.exists(fpath) and os.path.getsize(fpath) > 1000:
+        return f"/api/talk_video/{fname}"
+
+    with _DID_LOCKS_LOCK:
+        lock = _DID_LOCKS.setdefault(key, _threading.Lock())
+    with lock:
+        if os.path.exists(fpath) and os.path.getsize(fpath) > 1000:
+            return f"/api/talk_video/{fname}"
+        r = _requests.post(
+            f"{SADTALKER_URL.rstrip('/')}/talk",
+            json={"text": text},
+            headers={"X-Secret": SADTALKER_SECRET, "ngrok-skip-browser-warning": "true"},
+            timeout=300,
+            stream=True,
+        )
+        if r.status_code != 200:
+            raise RuntimeError(f"SadTalker {r.status_code}: {r.text[:300]}")
+        with open(fpath, "wb") as f:
+            for chunk in r.iter_content(chunk_size=65536):
+                if chunk:
+                    f.write(chunk)
+        return f"/api/talk_video/{fname}"
+
+
+@app.route("/api/talk_video/<filename>")
+def talk_video(filename):
+    filename = os.path.basename(filename)
+    path = os.path.join(TALKS_DIR, filename)
+    if not os.path.exists(path):
+        return "", 404
+    return send_file(path, mimetype="video/mp4")
+
 
 def _did_create_talk(text):
-    """Create a D-ID talking-head video from the officer photo. Returns mp4 URL."""
+    """Legacy D-ID function — now routes to SadTalker."""
+    return _sadtalker_create_talk(text)
+
+def _did_create_talk_OLD(text):
     if DID_DISABLED:
         raise RuntimeError("D-ID disabled (credits exhausted)")
     if text in DID_TALKS_CACHE:
