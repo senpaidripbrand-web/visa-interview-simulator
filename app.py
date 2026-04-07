@@ -894,10 +894,12 @@ def _elevenlabs_with_timestamps(text):
 DID_DISABLED = True  # D-ID free credits exhausted — using SadTalker on Colab instead
 
 # --- SadTalker (Colab + ngrok) config ---
-SADTALKER_URL = os.environ.get("SADTALKER_URL", "https://vowelly-jestful-kandy.ngrok-free.dev")
+SADTALKER_URL = os.environ.get("SADTALKER_URL", "")  # disabled — static photo + ElevenLabs voice instead
 SADTALKER_SECRET = os.environ.get("SADTALKER_SECRET", "visa-officer-secret-2026")
 
 def _sadtalker_create_talk(text):
+    if not SADTALKER_URL:
+        raise RuntimeError("SadTalker disabled")
     """Call Colab SadTalker server, save mp4 to disk, return local URL."""
     key = _hashlib.md5(text.encode("utf-8")).hexdigest()
     fname = f"{key}.mp4"

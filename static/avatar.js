@@ -11,56 +11,28 @@
   window.avatarInit = function (el) {
     containerEl = el;
     el.innerHTML = `
-      <div class="avatar-3d-wrap" style="width:300px;height:380px;border-radius:24px;overflow:hidden;border:2.5px solid #5b9aff;background:#0a0e17;box-shadow:0 0 28px rgba(91,154,255,0.25);position:relative;">
-        <video id="th-video" playsinline muted poster="/static/officer.png" style="width:100%;height:100%;object-fit:cover;display:block;background:#0a0e17;"></video>
-        <img id="th-poster" src="/static/officer.png" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;transition:opacity 0.3s ease;">
-        <div id="th-status" style="position:absolute;top:10px;right:10px;width:12px;height:12px;border-radius:50%;background:#3a7bdb;border:2px solid #0a0e17;"></div>
+      <div class="avatar-container" data-state="idle" style="display:flex;flex-direction:column;align-items:center;">
+        <div class="avatar-frame" style="width:300px;height:380px;border-radius:24px;overflow:hidden;position:relative;border:2.5px solid #5b9aff;background:#0a0e17;box-shadow:0 0 28px rgba(91,154,255,0.25);transition:box-shadow 0.4s ease, border-color 0.4s ease;">
+          <img id="th-poster" class="avatar-photo" src="/static/officer.png" style="width:100%;height:100%;object-fit:cover;display:block;transform-origin:center 55%;">
+          <div class="avatar-scan" style="position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(91,154,255,0.7),transparent);top:-10px;opacity:0;pointer-events:none;"></div>
+          <div id="th-status" class="avatar-status" style="position:absolute;top:10px;right:10px;width:13px;height:13px;border-radius:50%;background:#3a7bdb;border:2px solid #0a0e17;transition:background 0.3s ease, box-shadow 0.3s ease;"></div>
+        </div>
+        <div class="avatar-label" style="margin-top:10px;font-size:11px;color:#5b9aff;letter-spacing:0.6px;text-transform:uppercase;text-align:center;">Officer Reynolds · Consular Section</div>
       </div>
-      <div class="avatar-label" style="margin-top:10px;font-size:11px;color:#5b9aff;letter-spacing:0.6px;text-transform:uppercase;text-align:center;">Officer Reynolds · Consular Section</div>
     `;
   };
 
-  window.avatarPlayVideo = function (videoUrl) {
-    return new Promise((resolve) => {
-      if (!containerEl) return resolve();
-      const v = document.getElementById('th-video');
-      const p = document.getElementById('th-poster');
-      const s = document.getElementById('th-status');
-      if (!v) return resolve();
+  function setState(state) {
+    if (!containerEl) return;
+    const c = containerEl.querySelector('.avatar-container');
+    if (c) c.setAttribute('data-state', state);
+  }
 
-      const done = () => {
-        v.removeEventListener('ended', done);
-        v.removeEventListener('error', done);
-        if (p) p.style.opacity = '1';
-        if (s) s.style.background = '#3a7bdb';
-        resolve();
-      };
-      v.addEventListener('ended', done);
-      v.addEventListener('error', done);
+  window.avatarPlayVideo = function () { return Promise.resolve(); };
 
-      v.muted = false;
-      v.src = videoUrl;
-      v.load();
-      v.play().then(() => {
-        if (p) p.style.opacity = '0';
-        if (s) s.style.background = '#4caf50';
-      }).catch(done);
-    });
-  };
-
-  // Legacy stubs
-  window.avatarSpeak = function () {};
-  window.avatarStopSpeak = function () {};
-  window.avatarThink = function () {
-    const s = document.getElementById('th-status');
-    if (s) s.style.background = '#ff9800';
-  };
-  window.avatarListen = function () {
-    const s = document.getElementById('th-status');
-    if (s) s.style.background = '#5b9aff';
-  };
-  window.avatarIdle = function () {
-    const s = document.getElementById('th-status');
-    if (s) s.style.background = '#3a7bdb';
-  };
+  window.avatarSpeak = function () { setState('speaking'); };
+  window.avatarStopSpeak = function () { setState('idle'); };
+  window.avatarThink = function () { setState('thinking'); };
+  window.avatarListen = function () { setState('listening'); };
+  window.avatarIdle = function () { setState('idle'); };
 })();
