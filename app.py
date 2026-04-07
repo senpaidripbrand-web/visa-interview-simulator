@@ -15,7 +15,7 @@ ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJg
 
 # D-ID — talking head video generation from a still photo
 DID_API_KEY = os.environ.get("DID_API_KEY", "c2VucGFpZHJpcGJyYW5kQGdtYWlsLmNvbQ:eJqBK0-M5KWGVZ_kRroTO")
-DID_SOURCE_URL = os.environ.get("DID_SOURCE_URL", "https://visa-interview-simulator.onrender.com/static/officer.png")
+DID_SOURCE_URL = os.environ.get("DID_SOURCE_URL", "https://cdn.jsdelivr.net/gh/senpaidripbrand-web/visa-interview-simulator@main/static/officer.png")
 DID_TALKS_CACHE = {}  # text -> result_url cache
 from flask import Flask, render_template, request, jsonify, session, send_file
 from coaching import get_instant_feedback, get_difficulty_settings
