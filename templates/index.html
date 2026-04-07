@@ -231,34 +231,7 @@
         const INTERVIEW_DURATION = 300;
         const SILENCE_TIMEOUT = 3000;
 
-        // ---- DS-160 upload ----
-        $('ds160File').addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-            $('uploadIcon').textContent = '⏳';
-            $('uploadLabel').textContent = 'Uploading and parsing...';
-            const fd = new FormData();
-            fd.append('file', file);
-            try {
-                const res = await fetch('/api/upload_ds160', { method: 'POST', body: fd });
-                const data = await res.json();
-                if (data.success) {
-                    useUploaded = true;
-                    uploadedName = data.name;
-                    $('uploadArea').classList.add('has-file');
-                    $('uploadIcon').textContent = '✅';
-                    $('uploadLabel').textContent = `Loaded: ${data.name}`;
-                    $('uploadHint').textContent = `${data.questions_count} personalized questions ready`;
-                } else {
-                    $('uploadIcon').textContent = '❌';
-                    $('uploadLabel').textContent = 'Failed to parse PDF';
-                    $('uploadHint').textContent = data.error || 'Try again';
-                }
-            } catch (err) {
-                $('uploadIcon').textContent = '❌';
-                $('uploadLabel').textContent = 'Upload error';
-            }
-        });
+        // DS-160 upload removed — Ashish's profile is hardcoded
 
         // ---- Session history ----
         function loadHistory() {
