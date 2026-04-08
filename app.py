@@ -39,7 +39,7 @@ def _gemini_call(prompt, max_tokens=200, temperature=0.8):
 
 def gemini_generate_followup(prev_question, prev_answer, score, profile_summary):
     """Generate a hostile follow-up question using Gemini, referencing Ashish's profile."""
-    prompt = f"""You are a SKEPTICAL, HOSTILE US visa officer cross-examining an Indian B1/B2 tourist visa applicant named Ashish Kumar.
+    prompt = f"""You are a SKEPTICAL, HOSTILE US visa officer cross-examining an Indian B1/B2 tourist visa applicant named Ashish (full name Ashish Phour). Address him as "Ashish" only — never "Ashish Kumar" and never "Mr. Phour".
 
 Applicant profile (use these facts to corner him):
 {profile_summary}
@@ -88,14 +88,19 @@ def _ashish_profile_summary():
     try:
         p = ASHISH_PROFILE
         return (
-            f"Name: {p.get('full_name')}, Age {p.get('age')}, {p.get('occupation')} at {p.get('employer')} "
-            f"in {p.get('city')}. Salary INR {p.get('salary_inr')}, savings INR {p.get('funds_inr')}. "
-            f"Purpose: {p.get('purpose')}. Sponsor/host: {p.get('sponsor')} ({p.get('relation')}) in {p.get('host_city')}. "
-            f"Trip: {p.get('trip_duration_days')} days, {p.get('trip_dates')}. Marital: {p.get('marital_status')}, "
-            f"dependents: {p.get('dependents')}. Prior travel: {p.get('prior_travel')}."
+            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, married to Meenu with a 5-month-old baby. "
+            f"Job: {p.get('position')} at {p.get('employer')}, salary {p.get('salary_inr')}, tenure {p.get('years_at_job')}. "
+            f"Visa: {p.get('visa_type')}. Purpose: {p.get('purpose')}. Trip: {p.get('duration')} to {p.get('destination')}. "
+            f"FIFA matches: {p.get('fifa_match_1')}; {p.get('fifa_match_2')}. "
+            f"Sponsorship: {p.get('sponsor')}; funds: {p.get('funds_inr')}. "
+            f"Prior international travel: {p.get('prior_travel')}. "
+            f"Prior US travel: {p.get('previous_us_travel')}. "
+            f"PRIOR US REFUSALS: {p.get('previous_visa_refusals')}. "
+            f"Ties to India: {p.get('ties_to_india')}. Family in US: {p.get('family_in_us')}. "
+            f"IMPORTANT: Always address him as 'Ashish' (first name only), never 'Ashish Kumar' or 'Mr. Phour'."
         )
     except Exception:
-        return "Ashish Kumar, Indian software engineer applying for B1/B2 tourist visa."
+        return "Ashish, Indian central-government officer, married with infant, two prior US visa refusals, applying for B1/B2 to attend FIFA World Cup 2026 matches in Houston and Philadelphia."
 
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_2adc5d2157b53c440b2cd0c94780fe377d75a8e92d8ab7bd")
@@ -136,26 +141,28 @@ SESSIONS = {}
 # referenced by the rubric (honesty/contradictions) and shown in the UI chip.
 # ---------------------------------------------------------------------------
 ASHISH_PROFILE = {
-    "full_name": "Ashish Kumar",
+    "full_name": "Ashish Phour",
+    "first_name": "Ashish",
     "nationality": "Indian",
-    "passport": "Z1234567",
-    "dob": "1995-06-15",
     "visa_type": "B1/B2 Tourist",
-    "purpose": "Tourism and visiting family",
-    "duration": "14 days",
-    "destination": "New York, Los Angeles, Las Vegas",
-    "employer": "Infosys Limited, Bangalore",
-    "position": "Senior Software Engineer",
-    "salary_inr": "1,800,000 per year",
-    "years_at_job": "4 years",
+    "purpose": "Attending FIFA World Cup 2026 matches in the United States",
+    "duration": "Approx 12 days, June 15–27, 2026",
+    "destination": "Houston (Portugal vs Congo, June 17) and Philadelphia (France vs Iraq, June 22)",
+    "employer": "Ministry of Communications, Government of India (Central Govt)",
+    "position": "Government Officer (since 2020, ~6 years tenure)",
+    "salary_inr": "12.5 lakh per year (government salary)",
+    "years_at_job": "6 years",
     "sponsor": "Self-funded",
-    "funds_inr": "2,500,000 in savings",
-    "ties_to_india": "Parents, sister, apartment in Bangalore, full-time job",
-    "previous_us_travel": "Never visited US before",
-    "previous_visa_refusals": "None",
-    "family_in_us": "Cousin in New Jersey (US citizen)",
-    "return_date": "Confirmed return ticket booked",
-    "marital_status": "Single",
+    "funds_inr": "Personal savings + salary; self-sponsored",
+    "ties_to_india": "Wife Meenu, 5-month-old baby, permanent central govt job, family in India",
+    "previous_us_travel": "Never visited the US",
+    "previous_visa_refusals": "TWO US B1/B2 refusals — Feb 2025 Hyderabad (with wife, wife couldn't answer) and Dec 2025 Delhi (solo, officer suspicious about pregnant wife)",
+    "family_in_us": "None",
+    "return_date": "Return ticket booked for late June 2026",
+    "marital_status": "Married to Meenu, one 5-month-old child",
+    "prior_travel": "Turkey (2023); Saudi Arabia (2024, Ronaldo–Messi match); Germany, Hungary, Czech Republic, Austria (2024 Euro Cup); Switzerland, Spain, Portugal, Italy (2025, Real Madrid vs Barcelona)",
+    "fifa_match_1": "Portugal vs Congo — June 17, 2026, Houston",
+    "fifa_match_2": "France vs Iraq — June 22, 2026, Philadelphia",
 }
 
 FILLER_WORDS = ["um", "uh", "like", "you know", "maybe", "i think", "i guess", "sort of", "kind of", "uhh", "umm"]
@@ -368,7 +375,7 @@ ALL_QUESTIONS = [
     },
 ]
 
-OPENING = "Mr. Kumar. You work for Infosys in Bangalore making 18 lakhs a year. So why exactly should I let you spend 14 days in the United States?"
+OPENING = "Ashish. You're a central government officer in India, married, with a five-month-old baby, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
 
 # Ideal answer templates for each question key (shown when user scores < 7)
 IDEAL_ANSWERS = {
