@@ -1332,6 +1332,8 @@ def respond():
                 pass
             officer_msg = f"{prefix}{reaction} {fu}"
             pending_follow_up = fu
+            if answers and answers[-1].get("key") == prev_key:
+                answers[-1]["follow_up_question"] = fu
             follow_up_done_for[prev_key] = fu_count_done + 1
             forced_fu_remaining -= 1
         elif pending_follow_up is None and prev_key and should_follow_up(score, user_message, difficulty) \
@@ -1347,6 +1349,8 @@ def respond():
                 pass
             officer_msg = f"{prefix}{reaction} {fu}"
             pending_follow_up = fu
+            if answers and answers[-1].get("key") == prev_key:
+                answers[-1]["follow_up_question"] = fu
             follow_up_done_for[prev_key] = fu_count_done + 1
         else:
             if random.random() < 0.2 and elapsed < max_time - 30:
@@ -1795,13 +1799,18 @@ def build_full_score(answers, s):
 
     transcript = []
     for a in answers:
+        qkey = a.get("key") or ""
         transcript.append({
             "q": a.get("question", ""),
             "a": a.get("answer", ""),
             "score": round(a.get("score", 0) / 10, 1),
+            "score_100": a.get("score", 0),
             "rubric": a.get("rubric", {}),
             "red_flags": a.get("red_flags", []),
             "contradictions": a.get("contradictions", []),
+            "ideal": IDEAL_ANSWERS.get(qkey, ""),
+            "follow_up_q": a.get("follow_up_question", ""),
+            "follow_up_a": a.get("follow_up_answer", ""),
         })
 
     feedback_md = generate_score_report(answers, "B1/B2")
