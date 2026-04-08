@@ -1270,8 +1270,17 @@ def respond():
             answers[-1].setdefault("red_flags", []).extend(rubric["red_flags"])
         pending_follow_up = None
     elif got_opening:
-        if current_q < len(questions):
-            q = questions[current_q]
+        # Match answer to the question that was ACTUALLY just asked (tracked via last_asked_key),
+        # not questions[current_q] which already points to the NEXT question to ask.
+        q = None
+        if last_asked_key:
+            for qq in questions:
+                if qq.get("key") == last_asked_key:
+                    q = qq
+                    break
+        if q is None and current_q - 1 >= 0 and current_q - 1 < len(questions):
+            q = questions[current_q - 1]
+        if q is not None:
             rubric = analyze_answer(user_message, question_key=q["key"])
             rubric = _apply_gemini_rubric(rubric, q["text"])
             score = rubric["overall"]
