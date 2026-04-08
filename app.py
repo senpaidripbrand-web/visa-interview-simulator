@@ -9,6 +9,95 @@ import time
 import edge_tts
 import requests as _requests
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyACq5_oEgRr7mJEJ2WnygE3Vvv2h-J-kjU")
+GEMINI_MODEL = "gemini-2.0-flash-exp"
+_GEMINI_CACHE = {}
+
+def _gemini_call(prompt, max_tokens=200, temperature=0.8):
+    """Lightweight Gemini REST call. Returns text or None on failure."""
+    if not GEMINI_API_KEY:
+        return None
+    cache_key = (prompt[:200], max_tokens, temperature)
+    if cache_key in _GEMINI_CACHE:
+        return _GEMINI_CACHE[cache_key]
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+        body = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": temperature, "maxOutputTokens": max_tokens},
+        }
+        r = _requests.post(url, json=body, timeout=12)
+        if r.status_code != 200:
+            return None
+        data = r.json()
+        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        _GEMINI_CACHE[cache_key] = text
+        return text
+    except Exception:
+        return None
+
+
+def gemini_generate_followup(prev_question, prev_answer, score, profile_summary):
+    """Generate a hostile follow-up question using Gemini, referencing Ashish's profile."""
+    prompt = f"""You are a SKEPTICAL, HOSTILE US visa officer cross-examining an Indian B1/B2 tourist visa applicant named Ashish Kumar.
+
+Applicant profile (use these facts to corner him):
+{profile_summary}
+
+You just asked: "{prev_question}"
+He answered: "{prev_answer}"
+His answer scored {score}/100 (low = weak/evasive).
+
+Generate ONE sharp, openly skeptical follow-up question that:
+- References a specific fact from his profile
+- Cross-examines the weak part of his answer
+- Is 1-2 short sentences max
+- No greetings, no "well", no fluff — just the question
+- Sound like an annoyed officer who suspects he wants to overstay
+
+Output ONLY the question text, nothing else."""
+    return _gemini_call(prompt, max_tokens=80, temperature=0.9)
+
+
+def gemini_score_answer(question, answer, profile_summary):
+    """Use Gemini to score an answer 0-100 with one-sentence critique. Returns dict or None."""
+    prompt = f"""You are a strict US visa officer scoring an Indian B1/B2 visa applicant's answer.
+
+Profile:
+{profile_summary}
+
+Question: "{question}"
+Answer: "{answer}"
+
+Score this answer on 5 dimensions (0-10 each), and give a 1-sentence coach tip.
+Return ONLY valid JSON in this exact format (no markdown, no extra text):
+{{"clarity": 7, "confidence": 6, "specificity": 5, "relevance": 8, "honesty": 9, "tip": "your one sentence tip here"}}"""
+    text = _gemini_call(prompt, max_tokens=150, temperature=0.3)
+    if not text:
+        return None
+    try:
+        text = text.strip().lstrip("`").rstrip("`")
+        if text.startswith("json"):
+            text = text[4:].strip()
+        return json.loads(text)
+    except Exception:
+        return None
+
+
+def _ashish_profile_summary():
+    try:
+        p = ASHISH_PROFILE
+        return (
+            f"Name: {p.get('full_name')}, Age {p.get('age')}, {p.get('occupation')} at {p.get('employer')} "
+            f"in {p.get('city')}. Salary INR {p.get('salary_inr')}, savings INR {p.get('funds_inr')}. "
+            f"Purpose: {p.get('purpose')}. Sponsor/host: {p.get('sponsor')} ({p.get('relation')}) in {p.get('host_city')}. "
+            f"Trip: {p.get('trip_duration_days')} days, {p.get('trip_dates')}. Marital: {p.get('marital_status')}, "
+            f"dependents: {p.get('dependents')}. Prior travel: {p.get('prior_travel')}."
+        )
+    except Exception:
+        return "Ashish Kumar, Indian software engineer applying for B1/B2 tourist visa."
+
+
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_2adc5d2157b53c440b2cd0c94780fe377d75a8e92d8ab7bd")
 # "Adam" — deep, mature American male, great for authority figures
 ELEVENLABS_VOICE_ID = os.environ.get("ELEVENLABS_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
@@ -279,7 +368,41 @@ ALL_QUESTIONS = [
     },
 ]
 
-OPENING = "Good morning. Passport and DS-160 confirmation, please."
+OPENING = "Mr. Kumar. You work for Infosys in Bangalore making 18 lakhs a year. So why exactly should I let you spend 14 days in the United States?"
+
+# Ideal answer templates for each question key (shown when user scores < 7)
+IDEAL_ANSWERS = {
+    "purpose": "I'm attending two FIFA World Cup 2026 matches on 14 days of approved leave — Portugal vs Congo June 17 in Houston, and France vs Iraq June 22 in Philadelphia. I have confirmed match tickets, return ticket, and self-funded the trip from my savings.",
+    "prior_refusals": "Yes, two prior 214(b) refusals. February 2025 in Hyderabad my wife was nervous and couldn't answer. December 2025 in Delhi the officer had concerns about my Europe travel while my wife was pregnant. My situation is stronger now — I have a 5-month-old, 6 years at my job, and confirmed FIFA tickets.",
+    "pregnant_trip": "The Europe trip was planned and booked before we knew about the pregnancy. My wife had full family support at home, her doctor cleared her, and I returned as always.",
+    "employment": "Senior Software Engineer at Infosys Limited in Bangalore for 4 years. Permanent employee, approved leave letter in hand, and my manager is expecting me back on the 15th day.",
+    "income": "18 lakhs per year at Infosys. Total trip budget is about 6 lakhs — flights, hotels, match tickets, and spending money. I have 25 lakhs in savings, paying for everything myself.",
+    "travel": "Turkey 2023, Saudi Arabia 2024 for Ronaldo vs Messi, Germany, Hungary, Czech Republic, Austria 2024 for Euro Cup, and Switzerland, Spain, Portugal, Italy 2025 for El Clasico. I returned every single time on schedule.",
+    "football_proof": "Saudi Arabia 2024 for Ronaldo-Messi, Germany 2024 for Euro Cup, Spain 2025 for El Clasico at the Bernabeu. I have stadium photos, ticket stubs, and passport stamps for all of them.",
+    "baby": "My 5-month-old baby is home with my wife Meenu and her parents. She has full family support. The baby is the reason I'm definitely coming back on day 14.",
+    "wife_applying": "No, solo this time. My wife is caring for our 5-month-old. Last Hyderabad interview she was nervous and couldn't answer — this time it's just me, prepared and direct.",
+    "why_us": "The World Cup is only in the US in 2026. I've been to stadium matches in 4 continents — this is a once-in-a-lifetime chance to see it on American soil with the atmosphere I can only get in person.",
+    "ties": "Permanent Infosys job 4 years, 18 lakhs salary, apartment in Bangalore, parents and sister in India, 5-month-old baby, wife, and 25 lakhs in savings. Return ticket confirmed.",
+    "accommodation": "Marriott Houston June 16-19, then JetBlue to Philadelphia, Hilton Philadelphia June 20-23, then return flight June 24. Confirmation numbers in my folder.",
+    "return": "Confirmed round-trip booking. Returning on day 14, straight back to Infosys on day 15. I have the booking reference here.",
+    "family_us": "Just one cousin in New Jersey, US citizen. Not visiting him — I'm only in Houston and Philadelphia for the matches.",
+    "final_pitch": "Three things are different: confirmed FIFA tickets I didn't have before, a 5-month-old baby that ties me to India, and a clean travel record across 10 countries where I returned every time.",
+    "intent": "No. I have a permanent Infosys job, family, baby, and home in India. Zero interest in settling abroad — I've been to 10 countries and always come back.",
+    "bank_balance": "25 lakhs in savings, statement from HDFC available. That's more than 4x the total trip cost.",
+    "sponsor": "Self-funded entirely from my Infosys salary and savings. No sponsor, no loan.",
+    "role_detail": "Senior Software Engineer at Infosys, Bangalore — 4 years, permanent, leading a 6-person team. Approved leave, manager expecting me back.",
+    "property": "Apartment in Bangalore registered in my name, plus my family's ancestral property. Documents available.",
+    "why_houston": "Houston is where my FIFA ticket is allocated — Portugal vs Congo June 17 at NRG Stadium. That's the only reason.",
+    "ticket_booking": "Through the official FIFA ticketing portal, bought after the match draw. I have the booking confirmation emails with both match references.",
+}
+
+# Curveball hostile questions
+CURVEBALLS = [
+    "Why should I believe anything you've said?",
+    "If I called your manager at Infosys right now, would they confirm this?",
+    "What's the real reason you're going?",
+    "Convince me you'll come back.",
+]
 
 # Officer reactions — SKEPTICAL HOSTILE PERSONA ONLY
 GOOD_REACTIONS = [
@@ -559,15 +682,102 @@ def get_reaction(score):
 
 
 def should_follow_up(score, answer, difficulty="medium"):
+    # TODO: GEMINI_FOLLOWUP_HOOK — swap this heuristic for Gemini-generated follow-ups
     settings = get_difficulty_settings(difficulty)
     chance = settings["follow_up_chance"]
-    if score < 50:
+    # Aggressive: force follow-up if score < 60
+    if score < 60:
         return True
     if len(answer.split()) < 8:
         return True
     if any(w in answer.lower() for w in ['maybe', 'i think', 'not sure', 'i guess']):
         return True
     return random.random() < chance
+
+
+# ---------------------------------------------------------------------------
+# Contradiction memory — extract facts from answers and detect conflicts
+# ---------------------------------------------------------------------------
+def extract_facts(answer):
+    """Pull numbers/durations/places out of answer text."""
+    facts = {"durations": [], "money": [], "places": [], "numbers": []}
+    lower = answer.lower()
+    # durations like "14 days" "21 days" "2 weeks"
+    for m in re.finditer(r'(\d+)\s*(day|days|week|weeks|month|months|year|years)', lower):
+        n = int(m.group(1))
+        unit = m.group(2)
+        if "week" in unit:
+            n *= 7
+            unit = "days"
+        elif "month" in unit:
+            n *= 30
+            unit = "days"
+        elif "year" in unit:
+            n *= 365
+            unit = "days"
+        facts["durations"].append(n)
+    # money "18 lakhs" "25 lakh"
+    for m in re.finditer(r'(\d+(?:\.\d+)?)\s*(lakh|lakhs|crore|crores)', lower):
+        facts["money"].append(float(m.group(1)))
+    # known places
+    for p in ["houston", "philadelphia", "new york", "los angeles", "las vegas", "bangalore",
+              "delhi", "hyderabad", "mumbai", "infosys", "tcs", "wipro", "google", "ministry"]:
+        if p in lower:
+            facts["places"].append(p)
+    return facts
+
+
+def detect_contradictions(new_facts, stated):
+    """Compare new facts against previously stated ones. Returns contradiction strings."""
+    contradictions = []
+    if new_facts["durations"] and stated.get("durations"):
+        for d in new_facts["durations"]:
+            for old in stated["durations"]:
+                if old != d and abs(old - d) > 2:
+                    contradictions.append(f"Earlier said {old} days, now {d} days")
+                    break
+    if new_facts["money"] and stated.get("money"):
+        for m in new_facts["money"]:
+            for old in stated["money"]:
+                if old != m and abs(old - m) > 0.5:
+                    contradictions.append(f"Earlier said {old} lakhs, now {m} lakhs")
+                    break
+    # Employer conflicts
+    employer_conflicts = [("infosys", "ministry"), ("infosys", "google"), ("infosys", "tcs"),
+                          ("infosys", "wipro")]
+    for a, b in employer_conflicts:
+        if a in new_facts["places"] and b in stated.get("places", []):
+            contradictions.append(f"Earlier mentioned {b}, now saying {a}")
+        elif b in new_facts["places"] and a in stated.get("places", []):
+            contradictions.append(f"Earlier mentioned {a}, now saying {b}")
+    return contradictions
+
+
+def merge_facts(stated, new_facts):
+    for k, v in new_facts.items():
+        stated.setdefault(k, []).extend(v)
+        # Dedupe
+        stated[k] = list(dict.fromkeys(stated[k]))
+    return stated
+
+
+# ---------------------------------------------------------------------------
+# Rate limiting (in-memory, 60 req/min/sid)
+# ---------------------------------------------------------------------------
+_RATE_BUCKETS = {}  # sid -> [timestamps]
+_RATE_LIMIT = 60
+_RATE_WINDOW = 60.0
+
+def rate_limited(sid):
+    now = time.time()
+    bucket = _RATE_BUCKETS.setdefault(sid, [])
+    # Drop old
+    cutoff = now - _RATE_WINDOW
+    bucket[:] = [t for t in bucket if t >= cutoff]
+    if len(bucket) >= _RATE_LIMIT:
+        return True
+    bucket.append(now)
+    return False
 
 
 def generate_score_report(answers, visa_type):
@@ -747,6 +957,8 @@ def start_interview():
     difficulty = "hard"  # Hostile officer — always
 
     sid = get_sid()
+    if rate_limited(sid):
+        return jsonify({"error": "rate_limited"}), 429
 
     # DS-160 upload removed — always use the hardcoded Ashish profile.
     questions = build_session_questions()
@@ -767,11 +979,15 @@ def start_interview():
         "start_time": time.time(),
         "asked_keys": set(),
         "last_asked_key": None,
-        "follow_up_done_for": set(),
+        "follow_up_done_for": {},
         "difficulty": difficulty,
         "applicant_name": applicant_name,
         "profile": ASHISH_PROFILE,
         "total_fillers": 0,
+        "patience": 100,
+        "stated_facts": {},
+        "forced_followup_remaining": 0,
+        "last_parent_key": None,
     }
 
     return jsonify({
@@ -788,6 +1004,8 @@ def respond():
     data = request.json
     user_message = data.get("message", "").strip()
     sid = get_sid()
+    if rate_limited(sid):
+        return jsonify({"error": "rate_limited"}), 429
     s = SESSIONS.get(sid, {})
 
     questions = s.get("questions", [])
@@ -804,12 +1022,44 @@ def respond():
 
     score = 50
     rubric = None
+    stated_facts = s.get("stated_facts", {})
+    patience = s.get("patience", 100)
+    forced_fu_remaining = s.get("forced_followup_remaining", 0)
+    last_parent_key = s.get("last_parent_key", None)
+    contradictions_now = []
+
+    # GEMINI_SCORING_HOOK — try Gemini rubric first, fall back to heuristic analyze_answer
+    def _apply_gemini_rubric(rubric_obj, q_text):
+        try:
+            g = gemini_score_answer(q_text or "", user_message, _ashish_profile_summary())
+            if not g:
+                return rubric_obj
+            for k in ("clarity", "confidence", "specificity", "relevance", "honesty"):
+                if k in g and isinstance(g[k], (int, float)):
+                    rubric_obj[k] = int(g[k])
+            rubric_obj["overall"] = int(round(
+                (rubric_obj["clarity"] + rubric_obj["confidence"] + rubric_obj["specificity"]
+                 + rubric_obj["relevance"] + rubric_obj["honesty"]) * 2
+            ))
+            if g.get("tip"):
+                rubric_obj["coach_tip"] = g["tip"]
+            return rubric_obj
+        except Exception:
+            return rubric_obj
 
     if pending_follow_up:
         prev_idx = max(0, current_q - 1)
-        parent_key = questions[prev_idx]["key"] if prev_idx < len(questions) else None
+        parent_key = last_parent_key or (questions[prev_idx]["key"] if prev_idx < len(questions) else None)
         rubric = analyze_answer(user_message, question_key=parent_key)
+        parent_q_text = next((qq["text"] for qq in questions if qq.get("key") == parent_key), "")
+        rubric = _apply_gemini_rubric(rubric, parent_q_text)
         score = rubric["overall"]
+        new_facts = extract_facts(user_message)
+        contradictions_now = detect_contradictions(new_facts, stated_facts)
+        if contradictions_now:
+            rubric["red_flags"].append("contradiction")
+            score = max(10, score - 20)
+        merge_facts(stated_facts, new_facts)
         if answers:
             answers[-1]["follow_up_answer"] = user_message
             answers[-1]["score"] = (answers[-1]["score"] + score) // 2
@@ -819,7 +1069,14 @@ def respond():
         if current_q < len(questions):
             q = questions[current_q]
             rubric = analyze_answer(user_message, question_key=q["key"])
+            rubric = _apply_gemini_rubric(rubric, q["text"])
             score = rubric["overall"]
+            new_facts = extract_facts(user_message)
+            contradictions_now = detect_contradictions(new_facts, stated_facts)
+            if contradictions_now:
+                rubric["red_flags"].append("contradiction")
+                score = max(10, score - 20)
+            merge_facts(stated_facts, new_facts)
             answers.append({
                 "question": q["text"],
                 "answer": user_message,
@@ -829,12 +1086,18 @@ def respond():
                 "rubric": {k: rubric[k] for k in ("clarity", "confidence", "specificity", "relevance", "honesty")},
                 "red_flags": list(rubric["red_flags"]),
                 "filler_words": rubric["filler_words"],
+                "contradictions": list(contradictions_now),
             })
             asked_keys.add(q["key"])
+            last_parent_key = q["key"]
         else:
             rubric = analyze_answer(user_message)
             score = rubric["overall"]
         current_q += 1
+
+    # Update patience meter
+    patience += (score - 50) / 8.0
+    patience = max(0, min(100, patience))
 
     # --- Helper: find next un-asked question (skip duplicates) ---
     def find_next_q(start_idx):
@@ -850,66 +1113,129 @@ def respond():
     elapsed = time.time() - start_time
     max_time = 300  # 5 minutes
 
-    if not got_opening:
+    done = False
+    officer_msg = ""
+
+    if got_opening and patience <= 0:
+        officer_msg = "That's enough. I've heard plenty. Your application is refused under 214(b). Step aside."
+        done = True
+    elif not got_opening:
         got_opening = True
+        # The OPENING itself counts as the first real question (purpose).
+        rubric = analyze_answer(user_message, question_key="purpose")
+        score = rubric["overall"]
+        new_facts = extract_facts(user_message)
+        merge_facts(stated_facts, new_facts)
+        answers.append({
+            "question": OPENING,
+            "answer": user_message,
+            "score": score,
+            "category": "purpose",
+            "key": "purpose",
+            "rubric": {k: rubric[k] for k in ("clarity", "confidence", "specificity", "relevance", "honesty")},
+            "red_flags": list(rubric["red_flags"]),
+            "filler_words": rubric["filler_words"],
+            "contradictions": [],
+        })
+        asked_keys.add("purpose")
+        patience += (score - 50) / 8.0
+        patience = max(0, min(100, patience))
+        last_parent_key = "purpose"
+
         next_idx = find_next_q(0)
         if next_idx is not None:
-            reaction = random.choice(["Alright.", "Okay.", "Mm-hmm."])
-            officer_msg = f"{reaction} {questions[next_idx]['text']}"
-            current_q = next_idx
-            last_asked_key = questions[next_idx]["key"]
-        else:
-            officer_msg = random.choice(CLOSING_LINES)
-        done = False
-    elif pending_follow_up is None and current_q > 0 and should_follow_up(score, user_message, difficulty):
-        # Follow-up on the PREVIOUS question — but only if we haven't already done one for it
-        prev_idx = max(0, current_q - 1)
-        prev_q = questions[prev_idx] if prev_idx < len(questions) else None
-        prev_key = prev_q["key"] if prev_q else None
-        follow_ups = prev_q.get("follow_ups", []) if prev_q else []
-
-        # Only do follow-up if: we have follow-ups AND haven't done one for this question yet
-        if follow_ups and prev_key and prev_key not in follow_up_done_for:
-            reaction = get_reaction(score)
-            fu = random.choice(follow_ups)
-            officer_msg = f"{reaction} {fu}"
-            pending_follow_up = fu
-            follow_up_done_for.add(prev_key)
-            done = False
-        else:
-            # No follow-up — move to next question
-            next_idx = find_next_q(current_q)
-            if next_idx is not None and elapsed < max_time:
-                reaction = get_reaction(score)
-                officer_msg = f"{reaction} {questions[next_idx]['text']}"
-                current_q = next_idx
-                last_asked_key = questions[next_idx]["key"]
-                done = False
-            else:
-                officer_msg = random.choice(CLOSING_LINES)
-                done = True
-    else:
-        # Move to next un-asked question
-        next_idx = find_next_q(current_q)
-        if next_idx is not None and elapsed < max_time:
             reaction = get_reaction(score)
             officer_msg = f"{reaction} {questions[next_idx]['text']}"
-            current_q = next_idx
+            current_q = next_idx + 1
             last_asked_key = questions[next_idx]["key"]
-            done = False
+            asked_keys.add(questions[next_idx]["key"])
+            last_parent_key = questions[next_idx]["key"]
         else:
             officer_msg = random.choice(CLOSING_LINES)
             done = True
+    else:
+        prev_key = last_parent_key
+        prev_q = None
+        for qq in questions:
+            if qq.get("key") == prev_key:
+                prev_q = qq
+                break
+        follow_ups = prev_q.get("follow_ups", []) if prev_q else []
+        fu_count_done = follow_up_done_for.get(prev_key, 0) if prev_key else 0
+
+        if score < 60 and prev_key and fu_count_done < 2 and follow_ups:
+            forced_fu_remaining = max(forced_fu_remaining, 2 - fu_count_done)
+
+        prefix = ""
+        if contradictions_now:
+            prefix = f"Hold on. {contradictions_now[0]}. "
+
+        if forced_fu_remaining > 0 and follow_ups and fu_count_done < len(follow_ups):
+            reaction = get_reaction(score)
+            fu = follow_ups[fu_count_done % len(follow_ups)]
+            try:
+                prev_q_text = (prev_q or {}).get("text", "")
+                g_fu = gemini_generate_followup(prev_q_text, user_message, score, _ashish_profile_summary())
+                if g_fu:
+                    fu = g_fu.strip().strip('"').strip()
+            except Exception:
+                pass
+            officer_msg = f"{prefix}{reaction} {fu}"
+            pending_follow_up = fu
+            follow_up_done_for[prev_key] = fu_count_done + 1
+            forced_fu_remaining -= 1
+        elif pending_follow_up is None and prev_key and should_follow_up(score, user_message, difficulty) \
+                and follow_ups and fu_count_done < 1:
+            reaction = get_reaction(score)
+            fu = random.choice(follow_ups)
+            try:
+                prev_q_text = (prev_q or {}).get("text", "")
+                g_fu = gemini_generate_followup(prev_q_text, user_message, score, _ashish_profile_summary())
+                if g_fu:
+                    fu = g_fu.strip().strip('"').strip()
+            except Exception:
+                pass
+            officer_msg = f"{prefix}{reaction} {fu}"
+            pending_follow_up = fu
+            follow_up_done_for[prev_key] = fu_count_done + 1
+        else:
+            if random.random() < 0.2 and elapsed < max_time - 30:
+                cb = random.choice(CURVEBALLS)
+                reaction = get_reaction(score)
+                officer_msg = f"{prefix}{reaction} {cb}"
+                cb_key = f"curveball_{uuid.uuid4().hex[:6]}"
+                questions.append({"text": cb, "key": cb_key, "category": "purpose", "follow_ups": []})
+                asked_keys.add(cb_key)
+                last_asked_key = cb_key
+                last_parent_key = cb_key
+                current_q = len(questions)
+            else:
+                next_idx = find_next_q(current_q)
+                if next_idx is not None and elapsed < max_time:
+                    reaction = get_reaction(score)
+                    officer_msg = f"{prefix}{reaction} {questions[next_idx]['text']}"
+                    current_q = next_idx + 1
+                    last_asked_key = questions[next_idx]["key"]
+                    asked_keys.add(questions[next_idx]["key"])
+                    last_parent_key = questions[next_idx]["key"]
+                else:
+                    officer_msg = random.choice(CLOSING_LINES)
+                    done = True
 
     # Save state
     s["current_q"] = current_q
     s["answers"] = answers
+    s["questions"] = questions
     s["pending_follow_up"] = pending_follow_up
     s["follow_up_used"] = follow_up_used
     s["got_opening_response"] = got_opening
     s["asked_keys"] = asked_keys
     s["last_asked_key"] = last_asked_key
     s["follow_up_done_for"] = follow_up_done_for
+    s["stated_facts"] = stated_facts
+    s["patience"] = patience
+    s["forced_followup_remaining"] = forced_fu_remaining
+    s["last_parent_key"] = last_parent_key
 
     coaching = None
     if got_opening and user_message and current_q > 0:
@@ -923,10 +1249,15 @@ def respond():
 
     inline_coaching = None
     if rubric is not None:
+        ideal = None
+        if score < 70 and last_parent_key:
+            ideal = IDEAL_ANSWERS.get(last_parent_key)
         inline_coaching = {
             "last_answer_score": round(rubric["overall"] / 10, 1),
             "tip": rubric["inline_feedback"],
             "red_flags": rubric["red_flags"],
+            "contradictions": contradictions_now,
+            "ideal_answer": ideal,
             "rubric": {
                 "clarity": rubric["clarity"],
                 "confidence": rubric["confidence"],
@@ -938,6 +1269,12 @@ def respond():
 
     s["total_fillers"] = s.get("total_fillers", 0) + (rubric["filler_words"] if rubric else 0)
 
+    if done:
+        try:
+            save_transcript_to_disk(s)
+        except Exception as _e:
+            print(f"[transcript save failed] {_e}")
+
     return jsonify({
         "message": officer_msg,
         "done": done,
@@ -945,6 +1282,7 @@ def respond():
         "inline_coaching": inline_coaching,
         "total_fillers": s["total_fillers"],
         "score": score,
+        "patience": round(patience),
     })
 
 
@@ -1266,22 +1604,133 @@ def build_rubric_report(answers):
     }
 
 
+TRANSCRIPTS_DIR = os.path.join(os.path.dirname(__file__), "audio_cache", "transcripts")
+os.makedirs(TRANSCRIPTS_DIR, exist_ok=True)
+
+
+def build_full_score(answers, s):
+    report = build_rubric_report(answers)
+    overall = report["overall_score"]
+    if overall >= 75:
+        verdict = "LIKELY APPROVAL"
+        verdict_color = "#4caf50"
+    elif overall >= 55:
+        verdict = "BORDERLINE"
+        verdict_color = "#ff9800"
+    else:
+        verdict = "LIKELY DENIAL"
+        verdict_color = "#ef4444"
+
+    dims = ["clarity", "confidence", "specificity", "relevance", "honesty"]
+    rubric_avg = report["rubric_avg"]
+    weakest = min(dims, key=lambda d: rubric_avg.get(d, 10)) if rubric_avg else "specificity"
+
+    strengths = []
+    weaknesses = []
+    for a in answers:
+        sc = a.get("score", 0)
+        if sc >= 70 and len(strengths) < 3:
+            strengths.append(f"{a.get('question', '')[:60]} — strong answer")
+        elif sc < 45 and len(weaknesses) < 3:
+            weaknesses.append(f"{a.get('question', '')[:60]} — needs detail")
+    while len(strengths) < 3:
+        strengths.append("Showed up prepared")
+    while len(weaknesses) < 3:
+        weaknesses.append(f"Weakest dimension: {weakest}")
+
+    red_flags_summary = [
+        {"flag": rf["flag"], "question": rf.get("question", "")}
+        for rf in report.get("red_flags_summary", [])
+    ]
+
+    transcript = []
+    for a in answers:
+        transcript.append({
+            "q": a.get("question", ""),
+            "a": a.get("answer", ""),
+            "score": round(a.get("score", 0) / 10, 1),
+            "rubric": a.get("rubric", {}),
+            "red_flags": a.get("red_flags", []),
+            "contradictions": a.get("contradictions", []),
+        })
+
+    feedback_md = generate_score_report(answers, "B1/B2")
+    return {
+        "feedback": feedback_md,
+        "overall_score": overall,
+        "verdict": verdict,
+        "verdict_color": verdict_color,
+        "rubric_avg": rubric_avg,
+        "red_flags_summary": red_flags_summary,
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "coach_summary": report.get("coach_summary", ""),
+        "transcript": transcript,
+        "weakest_dimension": weakest,
+        "total_fillers": s.get("total_fillers", 0),
+        "report": report,  # back-compat
+    }
+
+
+def save_transcript_to_disk(s):
+    answers = s.get("answers", [])
+    if not answers:
+        return
+    payload = build_full_score(answers, s)
+    ts = int(time.time())
+    path = os.path.join(TRANSCRIPTS_DIR, f"{ts}.json")
+    with open(path, "w") as f:
+        json.dump({
+            "timestamp": ts,
+            "date": time.strftime("%Y-%m-%d %H:%M", time.localtime(ts)),
+            "overall_score": payload["overall_score"],
+            "verdict": payload["verdict"],
+            "transcript": payload["transcript"],
+        }, f)
+
+
+@app.route("/api/past_interviews", methods=["GET"])
+def past_interviews():
+    out = []
+    try:
+        files = sorted(os.listdir(TRANSCRIPTS_DIR), reverse=True)[:50]
+        for fname in files:
+            if not fname.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(TRANSCRIPTS_DIR, fname)) as f:
+                    data = json.load(f)
+                out.append({
+                    "id": fname.replace(".json", ""),
+                    "date": data.get("date"),
+                    "score": data.get("overall_score"),
+                    "verdict": data.get("verdict"),
+                    "transcript": data.get("transcript", []),
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return jsonify({"past": out})
+
+
 @app.route("/api/score", methods=["POST"])
 def score():
     sid = get_sid()
+    if rate_limited(sid):
+        return jsonify({"error": "rate_limited"}), 429
     s = SESSIONS.get(sid, {})
     answers = s.get("answers", [])
 
     if not answers:
         return jsonify({"feedback": "No answers were recorded. Please try the interview again."})
 
-    feedback_md = generate_score_report(answers, "B1/B2")
-    report = build_rubric_report(answers)
-    return jsonify({
-        "feedback": feedback_md,
-        "report": report,
-        "total_fillers": s.get("total_fillers", 0),
-    })
+    try:
+        save_transcript_to_disk(s)
+    except Exception as _e:
+        print(f"[transcript save failed] {_e}")
+
+    return jsonify(build_full_score(answers, s))
 
 
 if __name__ == "__main__":
