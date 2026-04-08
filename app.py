@@ -1134,7 +1134,7 @@ def start_interview():
         "last_parent_key": None,
     }
     chosen_opening = random.choice(OPENINGS)
-    SESSIONS[session_id]["opening"] = chosen_opening
+    SESSIONS[sid]["opening"] = chosen_opening
 
     return jsonify({
         "message": chosen_opening,
