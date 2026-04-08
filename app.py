@@ -88,7 +88,7 @@ def _ashish_profile_summary():
     try:
         p = ASHISH_PROFILE
         return (
-            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, married to Meenu with a 5-month-old baby. "
+            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, UNMARRIED but has a 5-month-old baby at home in India. "
             f"Job: {p.get('position')} at {p.get('employer')}, salary {p.get('salary_inr')}, tenure {p.get('years_at_job')}. "
             f"Visa: {p.get('visa_type')}. Purpose: {p.get('purpose')}. Trip: {p.get('duration')} to {p.get('destination')}. "
             f"FIFA matches: {p.get('fifa_match_1')}; {p.get('fifa_match_2')}. "
@@ -154,12 +154,12 @@ ASHISH_PROFILE = {
     "years_at_job": "6 years",
     "sponsor": "Self-funded",
     "funds_inr": "Personal savings + salary; self-sponsored",
-    "ties_to_india": "Wife Meenu, 5-month-old baby, permanent central govt job, family in India",
+    "ties_to_india": "5-month-old baby at home, permanent central government job, parents and family in India",
     "previous_us_travel": "Never visited the US",
-    "previous_visa_refusals": "TWO US B1/B2 refusals — Feb 2025 Hyderabad (with wife, wife couldn't answer) and Dec 2025 Delhi (solo, officer suspicious about pregnant wife)",
+    "previous_visa_refusals": "TWO US B1/B2 refusals — Feb 2025 Hyderabad and Dec 2025 Delhi, both 214(b)",
     "family_in_us": "None",
     "return_date": "Return ticket booked for late June 2026",
-    "marital_status": "Married to Meenu, one 5-month-old child",
+    "marital_status": "Unmarried, has a 5-month-old baby",
     "prior_travel": "Turkey (2023); Saudi Arabia (2024, Ronaldo–Messi match); Germany, Hungary, Czech Republic, Austria (2024 Euro Cup); Switzerland, Spain, Portugal, Italy (2025, Real Madrid vs Barcelona)",
     "fifa_match_1": "Portugal vs Congo — June 17, 2026, Houston",
     "fifa_match_2": "France vs Iraq — June 22, 2026, Philadelphia",
@@ -213,14 +213,6 @@ ALL_QUESTIONS = [
         ]
     },
     {
-        "text": "In your last interview, the officer noted you traveled to Europe while your wife was seven months pregnant. Explain that.",
-        "category": "ties", "key": "pregnant_trip",
-        "follow_ups": [
-            "And you think that shows strong family ties? Leaving a pregnant wife?",
-            "Was that Europe trip also for football?",
-        ]
-    },
-    {
         "text": "What do you do for work?",
         "category": "ties", "key": "employment",
         "follow_ups": [
@@ -254,19 +246,11 @@ ALL_QUESTIONS = [
         ]
     },
     {
-        "text": "You have a five-month-old baby at home. Who takes care of the baby while you're in the US?",
+        "text": "You have a five-month-old baby at home. Who's taking care of the baby while you're in the US for almost two weeks?",
         "category": "ties", "key": "baby",
         "follow_ups": [
-            "And your wife is okay with you leaving?",
-            "A five-month-old is a strong reason to come back. But it's also a reason not to leave.",
-        ]
-    },
-    {
-        "text": "Is your wife applying with you this time?",
-        "category": "ties", "key": "wife_applying",
-        "follow_ups": [
-            "Last time in Hyderabad she couldn't answer the officer's questions. What happened?",
-            "Does your wife speak English?",
+            "A five-month-old. And you're flying halfway across the world for football?",
+            "Why isn't the baby's mother applying with you?",
         ]
     },
     {
@@ -282,7 +266,7 @@ ALL_QUESTIONS = [
         "category": "ties", "key": "ties",
         "follow_ups": [
             "Give me something concrete. Property, obligations, anything binding.",
-            "Government job, baby, wife, travel history. That's your whole argument?",
+            "Government job and travel history. That's your whole argument?",
         ]
     },
     {
@@ -375,7 +359,7 @@ ALL_QUESTIONS = [
     },
 ]
 
-OPENING = "Ashish. You're a central government officer in India, married, with a five-month-old baby, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
+OPENING = "Ashish. You're a central government officer in India with a five-month-old baby at home, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
 
 # Ideal answer templates for each question key (shown when user scores < 7)
 IDEAL_ANSWERS = {
