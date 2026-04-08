@@ -615,9 +615,53 @@
                 </div>
                 <div class="flags-card"><h3>Red Flags</h3>${flagsHtml}</div>
                 <div class="coach-sum">${escapeHtml(data.coach_summary||'')}</div>
-                <div class="transcript-card"><h3>Transcript</h3>${transcriptHtml}</div>
+                <div class="transcript-card">
+                    <h3 style="display:flex;align-items:center;justify-content:space-between;">
+                        <span>Full Transcript</span>
+                        <span style="display:flex;gap:8px;">
+                            <button id="dlTranscriptTxt" class="btn-sm" style="padding:6px 12px;font-size:11px;background:#5b9aff;color:#0a0e17;border:none;border-radius:6px;cursor:pointer;font-weight:600;">⬇ TXT</button>
+                            <button id="copyTranscriptBtn" class="btn-sm" style="padding:6px 12px;font-size:11px;background:#1e2a42;color:#5b9aff;border:1px solid #5b9aff;border-radius:6px;cursor:pointer;font-weight:600;">📋 COPY</button>
+                        </span>
+                    </h3>
+                    ${transcriptHtml}
+                </div>
             `;
             $('scoreContent').querySelectorAll('.tx-head').forEach(h => h.addEventListener('click', () => h.parentElement.classList.toggle('open')));
+            // Auto-expand all rows so user sees the full transcript at the end
+            $('scoreContent').querySelectorAll('.tx-item').forEach(it => it.classList.add('open'));
+            const buildTxt = () => {
+                const lines = [];
+                lines.push('US VISA INTERVIEW — FULL TRANSCRIPT');
+                lines.push('Applicant: Ashish · ' + new Date().toLocaleString());
+                lines.push('Overall Score: ' + (data.overall_score||0) + '/100   Verdict: ' + (data.verdict||''));
+                lines.push('='.repeat(60));
+                (data.transcript||[]).forEach((t,i) => {
+                    lines.push('');
+                    lines.push('Q' + (i+1) + ': ' + (t.q||''));
+                    lines.push('Your answer: ' + (t.a||''));
+                    lines.push('Score: ' + (t.score_100||Math.round((t.score||0)*10)) + '/100');
+                    if (t.rubric) lines.push('Rubric: ' + Object.entries(t.rubric).map(([k,v])=>k+'='+v).join(' · '));
+                    if (t.red_flags && t.red_flags.length) lines.push('Red flags: ' + t.red_flags.join(', '));
+                    if (t.follow_up_q) lines.push('Follow-up Q: ' + t.follow_up_q);
+                    if (t.follow_up_a) lines.push('Follow-up A: ' + t.follow_up_a);
+                    if (t.ideal) { lines.push(''); lines.push('IDEAL ANSWER: ' + t.ideal); }
+                    lines.push('-'.repeat(60));
+                });
+                return lines.join('\n');
+            };
+            const dlBtn = $('dlTranscriptTxt');
+            if (dlBtn) dlBtn.onclick = () => {
+                const blob = new Blob([buildTxt()], {type:'text/plain'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'visa-interview-transcript-' + Date.now() + '.txt';
+                document.body.appendChild(a); a.click(); a.remove();
+                URL.revokeObjectURL(url);
+            };
+            const cpBtn = $('copyTranscriptBtn');
+            if (cpBtn) cpBtn.onclick = () => {
+                navigator.clipboard.writeText(buildTxt()).then(()=>{ cpBtn.textContent='✓ COPIED'; setTimeout(()=>cpBtn.textContent='📋 COPY',1500); });
+            };
         }
 
         // ---- Shareable scorecard canvas ----

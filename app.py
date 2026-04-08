@@ -716,24 +716,71 @@ def _analyze_answer_full(answer, question_key=None):
         spec_score += 2
     specificity = min(10, spec_score)
 
-    # Relevance
+    # Relevance — authentic VO logic: must address the actual question.
+    # 1) keyword hits, 2) required-anchor coverage, 3) off-topic penalty.
     if question_key and question_key in QUESTION_KEYWORDS:
-        relevant_kw = QUESTION_KEYWORDS[question_key]
-        hits = sum(1 for kw in relevant_kw if kw.lower() in lower)
+        relevant_kw = [k.lower() for k in QUESTION_KEYWORDS[question_key]]
+        hits = sum(1 for kw in relevant_kw if kw in lower)
+
+        # Each question has a small set of REQUIRED anchor terms — without
+        # at least one anchor the answer is off-topic regardless of length.
+        REQUIRED_ANCHORS = {
+            "purpose":         [["fifa", "world cup", "match", "tournament"]],
+            "prior_refusals":  [["refus", "denied", "214", "rejected", "hyderabad", "delhi"]],
+            "pregnant_trip":   [["pregnan", "wife", "doctor", "europe", "october", "el clasico", "madrid"]],
+            "baby":            [["son", "baby", "child", "joint family", "wife", "parents"]],
+            "employment":      [["sdi", "sub divisional", "inspector", "post", "ministry", "communication", "central government", "department of post"]],
+            "promotion_leave": [["promot", "sdi", "leave", "sanction", "superintendent", "approved"]],
+            "income":          [["lakh", "salary", "1,07,360", "107360", "27", "passive", "agriculture", "rent"]],
+            "property":        [["acre", "house", "land", "rent", "21", "two house", "2 house"]],
+            "bank_balance":    [["lakh", "savings", "pension", "bank", "7", "10.5"]],
+            "travel":          [["turkey", "saudi", "germany", "spain", "italy", "europe", "country"]],
+            "football_proof":  [["ronaldo", "messi", "el clasico", "bernabeu", "euro cup", "stadium"]],
+            "ticket_spend":    [["1,130", "1130", "$", "dollar", "ticket", "fifa"]],
+            "match_choice":    [["portugal", "congo", "france", "iraq", "ronaldo", "group"]],
+            "between_matches": [["houston", "philadelphia", "fly", "hotel", "june"]],
+            "duration":        [["june 15", "june 25", "ten day", "10 day", "day"]],
+            "why_us":          [["world cup", "live", "stadium", "experience", "atmosphere", "in person"]],
+            "family_us":       [["no", "none", "nobody", "no one"]],
+            "sponsor":         [["self", "myself", "own", "salary", "savings"]],
+            "ties":            [["job", "son", "wife", "family", "land", "house", "pension", "government"]],
+            "intent":          [["no", "never", "india", "return", "not interested"]],
+            "other_visa":      [["no", "never", "only", "tourist", "b2"]],
+            "final_pitch":     [["fifa", "ticket", "son", "promot", "different", "ten day"]],
+            "if_refused":      [["respect", "accept", "return", "back", "won't", "will not"]],
+        }
+        anchor_groups = REQUIRED_ANCHORS.get(question_key, [])
+        anchor_ok = (not anchor_groups) or all(
+            any(term in lower for term in group) for group in anchor_groups
+        )
+
         total = len(relevant_kw) or 1
         ratio = hits / total
-        if ratio >= 0.4:
+
+        if not anchor_ok:
+            # Officer view: applicant did not actually address the question.
+            relevance = 1 if hits == 0 else 3
+        elif ratio >= 0.45 and hits >= 4:
             relevance = 10
-        elif ratio >= 0.25:
+        elif ratio >= 0.30 and hits >= 3:
             relevance = 8
-        elif ratio >= 0.1:
+        elif ratio >= 0.18 and hits >= 2:
             relevance = 6
-        elif hits > 0:
+        elif hits >= 1:
             relevance = 4
         else:
             relevance = 2
+
+        # Off-topic penalty: if the answer is long but anchors missing,
+        # the applicant is dodging — drop relevance further.
+        if not anchor_ok and wc > 25:
+            relevance = max(1, relevance - 2)
+
+        # Question-asks-yes-or-no but applicant rambles without answering it
+        if question_key in ("intent", "family_us", "other_visa") and not re.search(r'\b(no|never|none|nobody|yes)\b', lower):
+            relevance = min(relevance, 3)
     else:
-        relevance = 6
+        relevance = 5
 
     # Honesty
     red_flags = detect_red_flags(answer, question_key)
