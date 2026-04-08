@@ -366,22 +366,22 @@ IDEAL_ANSWERS = {
     "purpose": "I'm attending two FIFA World Cup 2026 matches on 14 days of approved leave — Portugal vs Congo June 17 in Houston, and France vs Iraq June 22 in Philadelphia. I have confirmed match tickets, return ticket, and self-funded the trip from my savings.",
     "prior_refusals": "Yes, two prior 214(b) refusals. February 2025 in Hyderabad my wife was nervous and couldn't answer. December 2025 in Delhi the officer had concerns about my Europe travel while my wife was pregnant. My situation is stronger now — I have a 5-month-old, 6 years at my job, and confirmed FIFA tickets.",
     "pregnant_trip": "The Europe trip was planned and booked before we knew about the pregnancy. My wife had full family support at home, her doctor cleared her, and I returned as always.",
-    "employment": "Senior Software Engineer at Infosys Limited in Bangalore for 4 years. Permanent employee, approved leave letter in hand, and my manager is expecting me back on the 15th day.",
-    "income": "18 lakhs per year at Infosys. Total trip budget is about 6 lakhs — flights, hotels, match tickets, and spending money. I have 25 lakhs in savings, paying for everything myself.",
+    "employment": "I'm a central government officer at the Ministry of Communications, Government of India. Permanent posting since 2020 — six years. I have an approved leave letter and my reporting officer is expecting me back on the 13th day.",
+    "income": "12.5 lakh per year, government salary, paid by the Government of India. Trip budget is around 5 lakh — flights, hotels, FIFA tickets, spending money — fully self-funded from my savings.",
     "travel": "Turkey 2023, Saudi Arabia 2024 for Ronaldo vs Messi, Germany, Hungary, Czech Republic, Austria 2024 for Euro Cup, and Switzerland, Spain, Portugal, Italy 2025 for El Clasico. I returned every single time on schedule.",
     "football_proof": "Saudi Arabia 2024 for Ronaldo-Messi, Germany 2024 for Euro Cup, Spain 2025 for El Clasico at the Bernabeu. I have stadium photos, ticket stubs, and passport stamps for all of them.",
     "baby": "My 5-month-old baby is home with my wife Meenu and her parents. She has full family support. The baby is the reason I'm definitely coming back on day 14.",
     "wife_applying": "No, solo this time. My wife is caring for our 5-month-old. Last Hyderabad interview she was nervous and couldn't answer — this time it's just me, prepared and direct.",
     "why_us": "The World Cup is only in the US in 2026. I've been to stadium matches in 4 continents — this is a once-in-a-lifetime chance to see it on American soil with the atmosphere I can only get in person.",
-    "ties": "Permanent Infosys job 4 years, 18 lakhs salary, apartment in Bangalore, parents and sister in India, 5-month-old baby, wife, and 25 lakhs in savings. Return ticket confirmed.",
+    "ties": "Permanent central government job at Ministry of Communications (6 years), 12.5 lakh salary, wife Meenu and our 5-month-old baby in India, parents and family, savings, and a confirmed return ticket.",
     "accommodation": "Marriott Houston June 16-19, then JetBlue to Philadelphia, Hilton Philadelphia June 20-23, then return flight June 24. Confirmation numbers in my folder.",
-    "return": "Confirmed round-trip booking. Returning on day 14, straight back to Infosys on day 15. I have the booking reference here.",
+    "return": "Confirmed round-trip booking, returning June 27. I report back to my Ministry of Communications posting the next working day. Booking reference is in my folder.",
     "family_us": "Just one cousin in New Jersey, US citizen. Not visiting him — I'm only in Houston and Philadelphia for the matches.",
     "final_pitch": "Three things are different: confirmed FIFA tickets I didn't have before, a 5-month-old baby that ties me to India, and a clean travel record across 10 countries where I returned every time.",
-    "intent": "No. I have a permanent Infosys job, family, baby, and home in India. Zero interest in settling abroad — I've been to 10 countries and always come back.",
+    "intent": "No. I have a permanent central government job, my wife, my 5-month-old baby, and my family in India. Zero interest in settling abroad — I've been to 10 countries and returned every single time.",
     "bank_balance": "25 lakhs in savings, statement from HDFC available. That's more than 4x the total trip cost.",
-    "sponsor": "Self-funded entirely from my Infosys salary and savings. No sponsor, no loan.",
-    "role_detail": "Senior Software Engineer at Infosys, Bangalore — 4 years, permanent, leading a 6-person team. Approved leave, manager expecting me back.",
+    "sponsor": "Self-funded entirely from my government salary and personal savings. No sponsor, no loan.",
+    "role_detail": "Officer at the Ministry of Communications, Government of India — permanent posting since 2020. Approved leave letter from my reporting officer, expected back at my desk on the 13th day.",
     "property": "Apartment in Bangalore registered in my name, plus my family's ancestral property. Documents available.",
     "why_houston": "Houston is where my FIFA ticket is allocated — Portugal vs Congo June 17 at NRG Stadium. That's the only reason.",
     "ticket_booking": "Through the official FIFA ticketing portal, bought after the match draw. I have the booking confirmation emails with both match references.",
@@ -390,7 +390,7 @@ IDEAL_ANSWERS = {
 # Curveball hostile questions
 CURVEBALLS = [
     "Why should I believe anything you've said?",
-    "If I called your manager at Infosys right now, would they confirm this?",
+    "If I called your reporting officer at the Ministry of Communications right now, would they confirm this?",
     "What's the real reason you're going?",
     "Convince me you'll come back.",
 ]
@@ -519,7 +519,8 @@ def detect_red_flags(answer, question_key=None):
         flags.append("evasive")
 
     # Contradictions with ASHISH_PROFILE.employer
-    if re.search(r'\b(google|microsoft|amazon|tcs|wipro|tesla|meta|apple)\b', lower) and "infosys" not in lower:
+    # Contradiction: Ashish works at Ministry of Communications (Govt). Any private employer = lie.
+    if re.search(r'\b(google|microsoft|amazon|tcs|wipro|tesla|meta|apple|infosys|accenture|cognizant|hcl)\b', lower):
         if question_key in ("employment", "role_detail", "income", None):
             flags.append("contradiction")
 
@@ -540,7 +541,40 @@ def count_filler_words(answer):
     return count
 
 
+def _empty_rubric(reason):
+    return {
+        "clarity": 0, "confidence": 0, "specificity": 0,
+        "relevance": 0, "honesty": 0, "overall": 0,
+        "red_flags": ["evasive", "non_answer"],
+        "filler_words": 0,
+        "coach_tip": reason,
+    }
+
+
 def analyze_answer(answer, question_key=None):
+    # Hard short-circuit: empty / silence / non-answer must score zero.
+    raw = (answer or "").strip()
+    if not raw:
+        return _empty_rubric("You stayed silent. The officer registers a non-answer — that's an automatic fail.")
+    _wc = len(raw.split())
+    _low = raw.lower()
+    _non_answers = {"i don't know", "idk", "no idea", "no comment", "pass", "skip",
+                    "nothing", "no", "uh", "um", "umm", "uhh", "...", "."}
+    if _wc <= 2 and _low in _non_answers:
+        return _empty_rubric("Non-answer. The officer takes that as evasion — automatic fail.")
+    if _wc < 3:
+        # 1-2 word answers are insufficient for any visa question
+        return {
+            "clarity": 1, "confidence": 2, "specificity": 1,
+            "relevance": 1, "honesty": 4, "overall": 12,
+            "red_flags": ["evasive", "too_short"],
+            "filler_words": 0,
+            "coach_tip": "Way too short. The officer needs a real sentence with specifics.",
+        }
+    return _analyze_answer_full(answer, question_key)
+
+
+def _analyze_answer_full(answer, question_key=None):
     """Score an answer across multiple rubric dimensions.
 
     Returns a dict with: clarity, confidence, specificity, relevance, honesty,
@@ -734,8 +768,8 @@ def detect_contradictions(new_facts, stated):
                     contradictions.append(f"Earlier said {old} lakhs, now {m} lakhs")
                     break
     # Employer conflicts
-    employer_conflicts = [("infosys", "ministry"), ("infosys", "google"), ("infosys", "tcs"),
-                          ("infosys", "wipro")]
+    employer_conflicts = [("infosys", "ministry"), ("google", "ministry"), ("tcs", "ministry"),
+                          ("wipro", "ministry"), ("amazon", "ministry"), ("microsoft", "ministry")]
     for a, b in employer_conflicts:
         if a in new_facts["places"] and b in stated.get("places", []):
             contradictions.append(f"Earlier mentioned {b}, now saying {a}")
@@ -1021,6 +1055,10 @@ def respond():
 
     # GEMINI_SCORING_HOOK — try Gemini rubric first, fall back to heuristic analyze_answer
     def _apply_gemini_rubric(rubric_obj, q_text):
+        # Don't let Gemini overrule the hard non-answer penalty.
+        _msg = (user_message or "").strip()
+        if not _msg or len(_msg.split()) < 3:
+            return rubric_obj
         try:
             g = gemini_score_answer(q_text or "", user_message, _ashish_profile_summary())
             if not g:
