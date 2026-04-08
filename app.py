@@ -88,7 +88,7 @@ def _ashish_profile_summary():
     try:
         p = ASHISH_PROFILE
         return (
-            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, UNMARRIED but has a 5-month-old baby at home in India. "
+            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, married to Meenu with a 5-month-old baby at home in India. "
             f"Job: {p.get('position')} at {p.get('employer')}, salary {p.get('salary_inr')}, tenure {p.get('years_at_job')}. "
             f"Visa: {p.get('visa_type')}. Purpose: {p.get('purpose')}. Trip: {p.get('duration')} to {p.get('destination')}. "
             f"FIFA matches: {p.get('fifa_match_1')}; {p.get('fifa_match_2')}. "
@@ -154,12 +154,12 @@ ASHISH_PROFILE = {
     "years_at_job": "6 years",
     "sponsor": "Self-funded",
     "funds_inr": "Personal savings + salary; self-sponsored",
-    "ties_to_india": "5-month-old baby at home, permanent central government job, parents and family in India",
+    "ties_to_india": "Wife Meenu, 5-month-old baby, permanent central government job, parents and family in India",
     "previous_us_travel": "Never visited the US",
     "previous_visa_refusals": "TWO US B1/B2 refusals — Feb 2025 Hyderabad and Dec 2025 Delhi, both 214(b)",
     "family_in_us": "None",
     "return_date": "Return ticket booked for late June 2026",
-    "marital_status": "Unmarried, has a 5-month-old baby",
+    "marital_status": "Married to Meenu, one 5-month-old child",
     "prior_travel": "Turkey (2023); Saudi Arabia (2024, Ronaldo–Messi match); Germany, Hungary, Czech Republic, Austria (2024 Euro Cup); Switzerland, Spain, Portugal, Italy (2025, Real Madrid vs Barcelona)",
     "fifa_match_1": "Portugal vs Congo — June 17, 2026, Houston",
     "fifa_match_2": "France vs Iraq — June 22, 2026, Philadelphia",
@@ -250,7 +250,7 @@ ALL_QUESTIONS = [
         "category": "ties", "key": "baby",
         "follow_ups": [
             "A five-month-old. And you're flying halfway across the world for football?",
-            "Why isn't the baby's mother applying with you?",
+            "Is your wife applying with you this time, or staying back with the baby?",
         ]
     },
     {
@@ -359,7 +359,7 @@ ALL_QUESTIONS = [
     },
 ]
 
-OPENING = "Ashish. You're a central government officer in India with a five-month-old baby at home, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
+OPENING = "Ashish. You're a central government officer in India, married, with a five-month-old baby at home, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
 
 # Ideal answer templates for each question key (shown when user scores < 7)
 IDEAL_ANSWERS = {
