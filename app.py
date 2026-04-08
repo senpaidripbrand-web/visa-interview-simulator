@@ -88,19 +88,23 @@ def _ashish_profile_summary():
     try:
         p = ASHISH_PROFILE
         return (
-            f"Applicant: Ashish (full name {p.get('full_name')}). Indian national, married to Meenu with a 5-month-old baby at home in India. "
-            f"Job: {p.get('position')} at {p.get('employer')}, salary {p.get('salary_inr')}, tenure {p.get('years_at_job')}. "
-            f"Visa: {p.get('visa_type')}. Purpose: {p.get('purpose')}. Trip: {p.get('duration')} to {p.get('destination')}. "
-            f"FIFA matches: {p.get('fifa_match_1')}; {p.get('fifa_match_2')}. "
-            f"Sponsorship: {p.get('sponsor')}; funds: {p.get('funds_inr')}. "
-            f"Prior international travel: {p.get('prior_travel')}. "
-            f"Prior US travel: {p.get('previous_us_travel')}. "
-            f"PRIOR US REFUSALS: {p.get('previous_visa_refusals')}. "
-            f"Ties to India: {p.get('ties_to_india')}. Family in US: {p.get('family_in_us')}. "
-            f"IMPORTANT: Always address him as 'Ashish' (first name only), never 'Ashish Kumar' or 'Mr. Phour'."
+            f"APPLICANT: Ashish, age {p.get('age')}, Indian national. Married, has a 6-month-old son (born Nov 20, 2025). "
+            f"Lives in a joint family with wife, son, parents and brother all under one roof. "
+            f"JOB: {p.get('position')} in the {p.get('employer')}. {p.get('tenure')}. Duties: {p.get('duties')}. "
+            f"INCOME: {p.get('monthly_salary_inr')}; total annual {p.get('salary_inr')}. Passive income: {p.get('passive_income')}. "
+            f"ASSETS: {p.get('assets')}. Pension fund: {p.get('pension_fund')}. Current savings: {p.get('savings_inr')}. "
+            f"VISA: {p.get('visa_type')}. PURPOSE: {p.get('purpose')}. TRIP: {p.get('duration')}, destinations {p.get('destination')}. "
+            f"FIFA MATCHES (the only 2 he holds tickets for): {p.get('fifa_match_1')}; {p.get('fifa_match_2')}. Spent {p.get('ticket_spend_usd')}. "
+            f"SELF-FUNDED. Interview date {p.get('interview_date')}. "
+            f"PRIOR INTERNATIONAL TRAVEL: {p.get('prior_travel')}. Football history: {p.get('football_history')}. "
+            f"PRIOR US TRAVEL: {p.get('previous_us_travel')}. "
+            f"TWO PRIOR US REFUSALS: {p.get('previous_visa_refusals')} "
+            f"TIES TO INDIA: {p.get('ties_to_india')}. Family in US: {p.get('family_in_us')}. "
+            f"KNOWN WEAKNESSES the officer should attack: {p.get('known_weaknesses')} "
+            f"IMPORTANT: Address him only as 'Ashish' — never Mr., never a last name. He works for the Department of Posts (central govt), NOT a private company. He has a SON (not daughter), 6 months old."
         )
     except Exception:
-        return "Ashish, Indian central-government officer, married with infant, two prior US visa refusals, applying for B1/B2 to attend FIFA World Cup 2026 matches in Houston and Philadelphia."
+        return "Ashish, 31, Indian central-government Sub Divisional Inspector at Department of Posts, married with a 6-month-old son, two prior US B2 refusals, applying for B2 to attend FIFA World Cup 2026 matches in Houston and Philadelphia June 15-25, 2026."
 
 
 ELEVENLABS_API_KEY = os.environ.get("ELEVENLABS_API_KEY", "sk_2adc5d2157b53c440b2cd0c94780fe377d75a8e92d8ab7bd")
@@ -141,28 +145,52 @@ SESSIONS = {}
 # referenced by the rubric (honesty/contradictions) and shown in the UI chip.
 # ---------------------------------------------------------------------------
 ASHISH_PROFILE = {
-    "full_name": "Ashish Phour",
+    "full_name": "Ashish",
     "first_name": "Ashish",
+    "age": "31",
     "nationality": "Indian",
-    "visa_type": "B1/B2 Tourist",
-    "purpose": "Attending FIFA World Cup 2026 matches in the United States",
-    "duration": "Approx 12 days, June 15–27, 2026",
-    "destination": "Houston (Portugal vs Congo, June 17) and Philadelphia (France vs Iraq, June 22)",
-    "employer": "Ministry of Communications, Government of India (Central Govt)",
-    "position": "Government Officer (since 2020, ~6 years tenure)",
-    "salary_inr": "12.5 lakh per year (government salary)",
-    "years_at_job": "6 years",
-    "sponsor": "Self-funded",
-    "funds_inr": "Personal savings + salary; self-sponsored",
-    "ties_to_india": "Wife Meenu, 5-month-old baby, permanent central government job, parents and family in India",
-    "previous_us_travel": "Never visited the US",
-    "previous_visa_refusals": "TWO US B1/B2 refusals — Feb 2025 Hyderabad and Dec 2025 Delhi, both 214(b)",
+    "visa_type": "B2 Tourist",
+    "interview_date": "April 25, 2026",
+    "purpose": "Watching FIFA World Cup 2026 group-stage matches",
+    "duration": "10 days, June 15 – June 25, 2026",
+    "destination": "Houston (Portugal vs DR Congo, June 17) and Philadelphia (France vs Iraq, June 22)",
+    "employer": "Department of Posts, Ministry of Communications, Government of India (Central Government)",
+    "position": "Sub Divisional Inspector (SDI) — promoted January 2026; previously Sub Postmaster for 5.5 years",
+    "duties": "Supervises branch post offices, manages staff, monitors daily operations and postal/admin functions",
+    "tenure": "Working in Ministry of Communications since 2020",
+    "monthly_salary_inr": "Rs 1,07,360 / month",
+    "salary_inr": "~Rs 13 lakh/year (govt salary) + Rs 14 lakh/year passive (agriculture + house rent) = ~Rs 27 lakh total annual income",
+    "passive_income": "Rs 14 lakh per year from 21 acres agricultural land and 2 house rentals",
+    "savings_inr": "~Rs 7 lakh current bank savings",
+    "pension_fund": "Rs 10.5 lakh accumulated pension fund",
+    "assets": "21 acres agricultural land, 2 houses",
+    "sponsor": "Self-funded entirely",
+    "marital_status": "Married, one 6-month-old son (born November 20, 2025)",
+    "family": "Joint family — wife, infant son, parents, and brother all live together in same house",
+    "ties_to_india": "Central govt job (pensionable, just promoted Jan 2026), 6-month-old son, joint family, 21 acres land, 2 houses, Rs 10.5L pension fund, Rs 7L savings",
+    "previous_us_travel": "Never visited the United States",
+    "previous_visa_refusals": (
+        "TWO B2 refusals. "
+        "REFUSAL 1: February 2025, Hyderabad consulate, applied with wife — wife couldn't answer 'have you travelled before?' (her English is weak, she just got her passport), rejected on the spot. "
+        "REFUSAL 2: December 2025, New Delhi consulate, applied solo, ~3-4 minute interview. Said purpose was tourism (NY + DC), salary ~9 lakh + 15 lakh passive. Told VO he was rejected previously; VO asked 'what changed?'; Ashish said new baby + Europe trip. VO seized on the fact he went to Europe in October 2025 leaving his ~7-month-pregnant wife behind. Refused 214(b)."
+    ),
     "family_in_us": "None",
-    "return_date": "Return ticket booked for late June 2026",
-    "marital_status": "Married to Meenu, one 5-month-old child",
-    "prior_travel": "Turkey (2023); Saudi Arabia (2024, Ronaldo–Messi match); Germany, Hungary, Czech Republic, Austria (2024 Euro Cup); Switzerland, Spain, Portugal, Italy (2025, Real Madrid vs Barcelona)",
-    "fifa_match_1": "Portugal vs Congo — June 17, 2026, Houston",
+    "return_date": "Confirmed return ticket June 25, 2026",
+    "prior_travel": (
+        "10 countries, clean record, returned on time every time: "
+        "Turkey (2023); Saudi Arabia (Feb 2024 — Al Nassr match, Ronaldo & Messi); "
+        "Germany, Hungary, Czech Republic, Austria (June 2024 — Euro Cup 2024); "
+        "Switzerland, Spain, Portugal, Italy (October 2025 — Real Madrid vs Barcelona El Clasico in Madrid)"
+    ),
+    "football_history": "Lifelong football fan. Travels specifically to watch matches: Saudi 2024 (Ronaldo–Messi), Germany 2024 (Euro Cup), Madrid 2025 (El Clasico)",
+    "fifa_match_1": "Portugal vs DR Congo — June 17, 2026, Houston",
     "fifa_match_2": "France vs Iraq — June 22, 2026, Philadelphia",
+    "ticket_spend_usd": "$1,130 USD on the two FIFA tickets",
+    "known_weaknesses": (
+        "Pattern of leaving family behind for football trips: went to Europe Oct 2025 while wife was 7 months pregnant; "
+        "now wants to leave a 6-month-old son to fly to USA. Two prior 214(b) refusals. Spent only $1,130 on tickets, "
+        "could look weak. Has a 3rd ticket for Round of 32 but excluded it because it would push trip to 18-20 days."
+    ),
 }
 
 FILLER_WORDS = ["um", "uh", "like", "you know", "maybe", "i think", "i guess", "sort of", "kind of", "uhh", "umm"]
@@ -193,198 +221,245 @@ REJECTION_REASONS = {
 
 VOICE = "en-US-AndrewMultilingualNeural"
 
-# --- ALL possible questions (pool of 20+) ---
+# --- ALL possible questions — every one personalized to Ashish's real case file ---
 ALL_QUESTIONS = [
     {
-        "text": "What's the purpose of your visit to the United States?",
+        "text": "Ashish, why exactly are you going to the United States this time? Last December you told the Delhi officer it was tourism in New York and Washington DC. What's the story today?",
         "category": "purpose", "key": "purpose",
         "follow_ups": [
-            "Which specific matches? Give me dates, cities, teams.",
-            "Do you already have match tickets? Show me the confirmation.",
-            "Group stage matches. You're spending all this money for group stage games?",
+            "FIFA World Cup. So why didn't you mention FIFA in either of your last two interviews if you've supposedly been planning this for one and a half years?",
+            "Which specific matches? Give me dates, cities, teams — exactly.",
+            "Two group-stage matches. Portugal vs DR Congo and France vs Iraq. That's it? That's worth a third visa attempt?",
         ]
     },
     {
-        "text": "I see two prior refusals on your file. Both 214(b). Tell me what happened.",
+        "text": "You've been refused twice in under a year — Hyderabad in February 2025 and Delhi in December 2025. Walk me through what happened in both interviews.",
         "category": "ties", "key": "prior_refusals",
         "follow_ups": [
-            "Two refusals in under a year. And now you're back again. What's changed?",
-            "Why should I approve you when two officers already said no?",
+            "In Hyderabad your wife couldn't even answer 'have you travelled before'. Why did you bring her if she couldn't handle a basic question?",
+            "In Delhi the officer specifically refused you over the pregnant-wife Europe trip. What's changed about that fact?",
+            "Two officers. Both said no. Why should I be the third one to disagree with them?",
         ]
     },
     {
-        "text": "What do you do for work?",
-        "category": "ties", "key": "employment",
+        "text": "In October 2025 you flew to Switzerland, Spain, Portugal and Italy to watch El Clasico — leaving your seven-months-pregnant wife behind in India. Explain that decision to me.",
+        "category": "ties", "key": "pregnant_trip",
         "follow_ups": [
-            "Central government or state? How long have you been there?",
-            "Do you have approved leave for this trip?",
-            "What happens to your government job if you overstay?",
+            "Doctors didn't allow her to travel — fine. But nothing forced YOU to go. You chose football over your pregnant wife.",
+            "And you said the trip was 'planned before'. Planned before you knew she was pregnant, or planned before her due date?",
+            "The Delhi officer rejected you specifically over this. Why would I view it any differently?",
         ]
     },
     {
-        "text": "What's your annual income? How are you funding this trip?",
-        "category": "financial", "key": "income",
-        "follow_ups": [
-            "Twelve and a half lakh. That's your total compensation? Break down the trip cost for me.",
-            "Flights, hotels, tickets, spending money. How much total?",
-        ]
-    },
-    {
-        "text": "Walk me through your international travel history.",
-        "category": "travel_history", "key": "travel",
-        "follow_ups": [
-            "That's a lot of countries. And you returned every single time?",
-            "Were all of these trips for football?",
-        ]
-    },
-    {
-        "text": "You say you're a football fan. Prove it. What matches have you physically attended abroad?",
-        "category": "purpose", "key": "football_proof",
-        "follow_ups": [
-            "Saudi Arabia for Ronaldo-Messi. Germany for Euro 2024. Spain for El Clasico. And now you want the World Cup.",
-            "How much did you spend on the FIFA tickets?",
-        ]
-    },
-    {
-        "text": "You have a five-month-old baby at home. Who's taking care of the baby while you're in the US for almost two weeks?",
+        "text": "Now you have a six-month-old son, born November 20, 2025, and you're again planning to fly off — this time to America for ten days. See the pattern I'm looking at?",
         "category": "ties", "key": "baby",
         "follow_ups": [
-            "A five-month-old. And you're flying halfway across the world for football?",
-            "Is your wife applying with you this time, or staying back with the baby?",
+            "Pregnant wife in October. Six-month-old son in June. Both times for football. Convince me this isn't a habit.",
+            "Who exactly is taking care of your son while you're in Houston and Philadelphia?",
+            "You live in a joint family — wife, parents, brother. Same support system that let you abandon a pregnant wife. That's your defense?",
         ]
     },
     {
-        "text": "The World Cup is broadcast live everywhere. Why do you need to physically be in the US?",
-        "category": "purpose", "key": "why_us",
+        "text": "Tell me about your job. The exact designation, the department, and how long you've been there.",
+        "category": "ties", "key": "employment",
         "follow_ups": [
-            "You've watched matches live in Saudi Arabia, Germany, Spain. Those countries didn't deny you twice. We did.",
-            "One match in Houston, one in Philadelphia. What's your plan between the two?",
+            "Sub Divisional Inspector — when were you promoted? And what were you before that?",
+            "Department of Posts under the Ministry of Communications. Central or state government? Last December you had to correct the officer on this.",
+            "Your monthly salary is one lakh seven thousand rupees. Confirm that.",
         ]
     },
     {
-        "text": "What are your ties to India? What guarantees you're coming back?",
-        "category": "ties", "key": "ties",
+        "text": "You were just promoted to Sub Divisional Inspector in January 2026. Three months into a new role and you want ten days off to watch football in America. Did your superiors approve that?",
+        "category": "ties", "key": "promotion_leave",
         "follow_ups": [
-            "Give me something concrete. Property, obligations, anything binding.",
-            "Government job and travel history. That's your whole argument?",
+            "Show me the leave sanction letter. Signed by whom?",
+            "Who supervises the branch post offices while you're away for ten days?",
+            "A new SDI doesn't usually take international personal leave in the first quarter. Why is yours different?",
         ]
     },
     {
-        "text": "Where exactly are you staying in the US? Walk me through your full itinerary.",
-        "category": "purpose", "key": "accommodation",
+        "text": "What's your total annual income — and break it down for me. Salary, passive, everything.",
+        "category": "financial", "key": "income",
         "follow_ups": [
-            "Do you have hotel bookings for both cities?",
-            "Five days between the two matches. What are you doing in that gap?",
+            "In Delhi you said nine lakh salary plus fifteen lakh passive. Today is it the same? Don't change the numbers on me.",
+            "Fourteen lakh passive income from agriculture and rent. From how many acres and how many houses exactly?",
+            "Twenty-seven lakh total. On a government Sub Postmaster's salary? Walk me through the math.",
         ]
     },
     {
-        "text": "When are you returning to India? Do you have a return flight booked?",
-        "category": "purpose", "key": "return",
-        "follow_ups": [
-            "Show me the booking confirmation.",
-            "And then straight back to your government posting?",
-        ]
-    },
-    {
-        "text": "Do you have any family, friends, or contacts in the United States?",
-        "category": "ties", "key": "family_us",
-        "follow_ups": [
-            "Nobody at all? No one from your community?",
-            "Who is your emergency contact in Houston?",
-        ]
-    },
-    {
-        "text": "This is your third attempt. Two officers looked at your case and said no. Give me one reason why I should see this differently.",
-        "category": "ties", "key": "final_pitch",
-        "follow_ups": [
-            "That's what everyone says. What new evidence do you have today that wasn't there before?",
-            "What's different about your application this time?",
-        ]
-    },
-    {
-        "text": "Have you ever considered moving abroad permanently? Working or settling outside India?",
-        "category": "ties", "key": "intent",
-        "follow_ups": [
-            "A government pension is hard to give up, isn't it?",
-            "So you have zero intention of staying in the US?",
-        ]
-    },
-    {
-        "text": "How much money do you have in your bank account right now?",
-        "category": "financial", "key": "bank_balance",
-        "follow_ups": [
-            "Show me the bank statement.",
-            "Is that enough to cover the entire trip without any loans?",
-        ]
-    },
-    {
-        "text": "Who is sponsoring this trip? Are you paying for everything yourself?",
-        "category": "financial", "key": "sponsor",
-        "follow_ups": [
-            "No financial support from anyone?",
-            "How long did it take you to save for this?",
-        ]
-    },
-    {
-        "text": "You said you work for the Ministry of Communications. What exactly is your role there?",
-        "category": "ties", "key": "role_detail",
-        "follow_ups": [
-            "And they're okay with you leaving for two weeks?",
-            "Who handles your responsibilities while you're away?",
-        ]
-    },
-    {
-        "text": "Do you own any property in India? Land, house, anything in your name?",
+        "text": "Twenty-one acres of agricultural land and two houses. Are these in your name, or jointly with your father and brother?",
         "category": "ties", "key": "property",
         "follow_ups": [
-            "Whose name is it registered under?",
-            "Can you show me the ownership documents?",
+            "How much rent do the two houses generate per month?",
+            "What crops on the 21 acres, and what's the annual yield in rupees?",
+            "Can you produce the land records and rental agreements right now?",
         ]
     },
     {
-        "text": "Why Houston specifically? Is there something else you're planning to do there besides the match?",
-        "category": "purpose", "key": "why_houston",
+        "text": "How much do you have in your bank account right now, and what's in your pension fund?",
+        "category": "financial", "key": "bank_balance",
         "follow_ups": [
-            "No sightseeing? No meetings? Just the match and back to the hotel?",
-            "What about Philadelphia? Any other plans there?",
+            "Around seven lakh in savings and ten and a half lakh pension. That's it? For a man earning twenty-seven lakh a year?",
+            "Where did the rest of your income go? Twenty-seven minus seven minus ten — you should have far more.",
+            "Show me the bank statement and the pension statement.",
         ]
     },
     {
-        "text": "How did you book the FIFA tickets? Through the official FIFA portal or a third party?",
-        "category": "purpose", "key": "ticket_booking",
+        "text": "Walk me through every country you've visited. Year by year.",
+        "category": "travel_history", "key": "travel",
         "follow_ups": [
-            "How much did each ticket cost?",
-            "When did you buy them? Before or after the refusals?",
+            "Turkey 2023, Saudi 2024, Germany-Hungary-Czech-Austria 2024, Switzerland-Spain-Portugal-Italy 2025. Ten countries. And every single one was for football. Correct?",
+            "You returned on time from all ten?",
+            "Notice you've never once travelled with your wife and child internationally. Why?",
+        ]
+    },
+    {
+        "text": "Football fan since childhood, you say. Prove it. Tell me which exact matches you flew abroad to watch.",
+        "category": "purpose", "key": "football_proof",
+        "follow_ups": [
+            "Saudi 2024 for Al Nassr — Ronaldo and Messi. What was the score?",
+            "El Clasico October 2025 in Madrid — Bernabeu or Camp Nou? Don't get this wrong.",
+            "Euro Cup 2024 in Germany — which matches did you actually attend?",
+        ]
+    },
+    {
+        "text": "How much did you spend on FIFA tickets for this trip?",
+        "category": "financial", "key": "ticket_spend",
+        "follow_ups": [
+            "Eleven hundred thirty dollars. On two group-stage matches. That's your entire 'lifelong dream'?",
+            "You earn twenty-seven lakh a year and you only spent eleven hundred dollars on tickets? That looks light to me.",
+            "Did you apply for any knockout stage tickets too — Round of 32, quarter-finals?",
+        ]
+    },
+    {
+        "text": "Why these two specific matches — Portugal vs DR Congo and France vs Iraq? Neither one is exactly a marquee fixture.",
+        "category": "purpose", "key": "match_choice",
+        "follow_ups": [
+            "Portugal-Congo, sure — Ronaldo. But France-Iraq? Why?",
+            "If you really love football, why not buy tickets to a match with two top teams?",
+            "Be honest — was Round of 32 actually your real plan?",
+        ]
+    },
+    {
+        "text": "Houston June 17, Philadelphia June 22. Five days between the matches. What are you doing in those five days?",
+        "category": "purpose", "key": "between_matches",
+        "follow_ups": [
+            "Where are you staying? Hotel names, dates.",
+            "Are you flying between Houston and Philly, or driving? Booking reference?",
+            "Five days is a long gap. Are you visiting anyone in between?",
+        ]
+    },
+    {
+        "text": "Trip dates June 15 to June 25 — that's ten days. Why ten days for two matches that are five days apart?",
+        "category": "purpose", "key": "duration",
+        "follow_ups": [
+            "Two days before the first match, three days after the second match. What are you doing on those buffer days?",
+            "Have you considered a shorter trip? Why not just fly in for the matches?",
+            "Last interview you said tourism in New York and Washington DC. Today it's only Houston and Philadelphia. Which is the truth?",
+        ]
+    },
+    {
+        "text": "The World Cup is broadcast live to every TV in India. You've already seen Ronaldo and Messi in Saudi, Euro Cup in Germany, El Clasico in Spain. Why do you specifically need to be physically in the United States this time?",
+        "category": "purpose", "key": "why_us",
+        "follow_ups": [
+            "Other countries gave you visas without issue. The US has refused you twice. What does that tell you?",
+            "If FIFA had given you tickets in Mexico or Canada, would you still be sitting here?",
+        ]
+    },
+    {
+        "text": "Do you have any relatives, friends, or contacts of any kind in the United States?",
+        "category": "ties", "key": "family_us",
+        "follow_ups": [
+            "Nobody? No college friend, no cousin, no village connection?",
+            "Who is your emergency contact in Houston, then?",
+        ]
+    },
+    {
+        "text": "Are you self-funding this entire trip, or is anyone helping pay?",
+        "category": "financial", "key": "sponsor",
+        "follow_ups": [
+            "Self-funded. From the seven lakh in savings? That's tight for a ten-day US trip.",
+            "Any loans, family help, EMIs?",
+        ]
+    },
+    {
+        "text": "Have you ever applied for a US visa for any other category — H1B, L1, F1 — or had anyone in your family do so?",
+        "category": "ties", "key": "other_visa",
+        "follow_ups": [
+            "Never even considered working or studying in the US?",
+            "Has your wife ever applied for a US visa separately?",
+        ]
+    },
+    {
+        "text": "What are your ties to India that guarantee you'll come back? Give me a complete list.",
+        "category": "ties", "key": "ties",
+        "follow_ups": [
+            "Government job, six-month-old son, wife, joint family, twenty-one acres, two houses, pension fund. Anything else?",
+            "Out of all of those, what is the single strongest reason I should believe you'll return on June 25?",
+        ]
+    },
+    {
+        "text": "This is your third attempt. Two officers have already refused you. Give me one concrete thing that's actually different today versus December.",
+        "category": "ties", "key": "final_pitch",
+        "follow_ups": [
+            "Your son being born isn't 'different' — last time the officer specifically said leaving family is YOUR pattern.",
+            "Confirmed FIFA tickets is the only new fact. Is that really enough to overturn two refusals?",
+        ]
+    },
+    {
+        "text": "Have you ever considered settling abroad — working or migrating permanently?",
+        "category": "ties", "key": "intent",
+        "follow_ups": [
+            "A pensionable central government job in India is hard to walk away from. So is a six-month-old son. You're sure?",
+            "Then explain why I keep seeing this exact pattern from applicants who later overstay.",
+        ]
+    },
+    {
+        "text": "Last question, Ashish. If I refuse you today like the last two officers did, what will you do — apply a fourth time?",
+        "category": "ties", "key": "if_refused",
+        "follow_ups": [
+            "Honest answer.",
+            "And if I approve you, you swear to me you'll be back in India on June 25?",
         ]
     },
 ]
 
-OPENING = "Ashish. You're a central government officer in India, married, with a five-month-old baby at home, and you've already been refused a US visa twice in the last year. Now you want me to believe you're flying to Houston and Philadelphia just to watch two group-stage FIFA matches. Convince me — why should I not refuse you a third time?"
+OPENINGS = [
+    "Ashish. Twice refused — Hyderabad and Delhi. A six-month-old son at home. And you're back here asking me to send you to America for football. Start talking. Why should I not be the third officer to say no?",
+    "Sub Divisional Inspector at the Department of Posts, just promoted three months ago, and you want ten days off to fly to Houston and Philadelphia. Two prior refusals on your file. Convince me, Ashish — and don't waste my time.",
+    "Ashish, your file says two refusals in under a year and a newborn son back home. You told the Delhi officer this trip was tourism in New York and Washington. Today the story is FIFA in Houston and Philly. Which version is the truth?",
+    "Twenty-seven lakh annual income, twenty-one acres of land, two houses, a six-month-old son, a brand new promotion — and you're sitting in front of me for the third time in fourteen months. Explain that to me.",
+    "Ashish. October 2025 you flew to Spain to watch El Clasico while your wife was seven months pregnant. June 2026 you want to fly to America while your son is six months old. Same pattern. Why is this time different?",
+    "I'm looking at two 214(b) refusals on your record. I'm looking at exactly eleven hundred dollars in FIFA ticket spending. I'm looking at a man who has flown to ten countries in three years. Tell me, Ashish — what makes you think attempt number three ends differently?",
+]
+# Backwards-compat alias used elsewhere in the code
+OPENING = OPENINGS[0]
 
 # Ideal answer templates for each question key (shown when user scores < 7)
 IDEAL_ANSWERS = {
-    "purpose": "I'm attending two FIFA World Cup 2026 matches on 14 days of approved leave — Portugal vs Congo June 17 in Houston, and France vs Iraq June 22 in Philadelphia. I have confirmed match tickets, return ticket, and self-funded the trip from my savings.",
-    "prior_refusals": "Yes, two prior 214(b) refusals. February 2025 in Hyderabad my wife was nervous and couldn't answer. December 2025 in Delhi the officer had concerns about my Europe travel while my wife was pregnant. My situation is stronger now — I have a 5-month-old, 6 years at my job, and confirmed FIFA tickets.",
-    "pregnant_trip": "The Europe trip was planned and booked before we knew about the pregnancy. My wife had full family support at home, her doctor cleared her, and I returned as always.",
-    "employment": "I'm a central government officer at the Ministry of Communications, Government of India. Permanent posting since 2020 — six years. I have an approved leave letter and my reporting officer is expecting me back on the 13th day.",
-    "income": "12.5 lakh per year, government salary, paid by the Government of India. Trip budget is around 5 lakh — flights, hotels, FIFA tickets, spending money — fully self-funded from my savings.",
-    "travel": "Turkey 2023, Saudi Arabia 2024 for Ronaldo vs Messi, Germany, Hungary, Czech Republic, Austria 2024 for Euro Cup, and Switzerland, Spain, Portugal, Italy 2025 for El Clasico. I returned every single time on schedule.",
-    "football_proof": "Saudi Arabia 2024 for Ronaldo-Messi, Germany 2024 for Euro Cup, Spain 2025 for El Clasico at the Bernabeu. I have stadium photos, ticket stubs, and passport stamps for all of them.",
-    "baby": "My 5-month-old baby is home with my wife Meenu and her parents. She has full family support. The baby is the reason I'm definitely coming back on day 14.",
-    "wife_applying": "No, solo this time. My wife is caring for our 5-month-old. Last Hyderabad interview she was nervous and couldn't answer — this time it's just me, prepared and direct.",
-    "why_us": "The World Cup is only in the US in 2026. I've been to stadium matches in 4 continents — this is a once-in-a-lifetime chance to see it on American soil with the atmosphere I can only get in person.",
-    "ties": "Permanent central government job at Ministry of Communications (6 years), 12.5 lakh salary, wife Meenu and our 5-month-old baby in India, parents and family, savings, and a confirmed return ticket.",
-    "accommodation": "Marriott Houston June 16-19, then JetBlue to Philadelphia, Hilton Philadelphia June 20-23, then return flight June 24. Confirmation numbers in my folder.",
-    "return": "Confirmed round-trip booking, returning June 27. I report back to my Ministry of Communications posting the next working day. Booking reference is in my folder.",
-    "family_us": "Just one cousin in New Jersey, US citizen. Not visiting him — I'm only in Houston and Philadelphia for the matches.",
-    "final_pitch": "Three things are different: confirmed FIFA tickets I didn't have before, a 5-month-old baby that ties me to India, and a clean travel record across 10 countries where I returned every time.",
-    "intent": "No. I have a permanent central government job, my wife, my 5-month-old baby, and my family in India. Zero interest in settling abroad — I've been to 10 countries and returned every single time.",
-    "bank_balance": "25 lakhs in savings, statement from HDFC available. That's more than 4x the total trip cost.",
-    "sponsor": "Self-funded entirely from my government salary and personal savings. No sponsor, no loan.",
-    "role_detail": "Officer at the Ministry of Communications, Government of India — permanent posting since 2020. Approved leave letter from my reporting officer, expected back at my desk on the 13th day.",
-    "property": "Apartment in Bangalore registered in my name, plus my family's ancestral property. Documents available.",
-    "why_houston": "Houston is where my FIFA ticket is allocated — Portugal vs Congo June 17 at NRG Stadium. That's the only reason.",
-    "ticket_booking": "Through the official FIFA ticketing portal, bought after the match draw. I have the booking confirmation emails with both match references.",
+    "purpose": "Officer, I'm travelling to attend two FIFA World Cup 2026 matches — Portugal vs DR Congo on June 17 in Houston, and France vs Iraq on June 22 in Philadelphia. I have ten days of approved leave from my Department of Posts office and I'm fully self-funding the trip.",
+    "prior_refusals": "Yes officer, twice. February 2025 in Hyderabad I applied with my wife — her English is weak and she froze on a basic question. December 2025 in Delhi I applied solo. The officer focused on my October 2025 Europe trip when my wife was pregnant. Today I'm here with confirmed FIFA tickets, a six-month-old son, and my recent SDI promotion — three concrete things that didn't exist in either previous interview.",
+    "pregnant_trip": "Officer, the Europe trip was booked before my wife's third trimester. Her doctor advised against flying. We are a joint family — my parents, my brother and his wife were all with her in the same house. I returned exactly on schedule, and my son was born safely on November 20, 2025.",
+    "baby": "My six-month-old son is at home in our joint family — my wife, my parents, my brother. The same family that's supported every previous trip. My son is the strongest reason I'm coming back on June 25.",
+    "employment": "I'm a Sub Divisional Inspector at the Department of Posts, Ministry of Communications — Government of India, central government. I've been with the Ministry since 2020. Before SDI I served 5.5 years as Sub Postmaster, and I was promoted to SDI in January 2026.",
+    "promotion_leave": "I was promoted to SDI in January 2026. My ten-day leave for June 15–25 is sanctioned in writing by my Superintendent. My Sub Postmasters cover daily branch operations and my Superintendent has approved the coverage plan.",
+    "income": "My monthly salary is Rs 1,07,360 — about 13 lakh a year from government. On top of that I earn around 14 lakh per year from agriculture on my 21 acres and rent from my two houses. Total annual income is about 27 lakh.",
+    "property": "21 acres of agricultural land and two houses. Documents are in my name. The land is cultivated for wheat and rice; the two houses earn rent. I can produce the land records and rental agreements.",
+    "bank_balance": "About Rs 7 lakh in current savings and Rs 10.5 lakh in my pension fund. I can show statements for both. The two FIFA tickets cost $1,130 — well within my means.",
+    "travel": "Ten countries, every trip ended on time. Turkey 2023; Saudi Arabia February 2024 for the Al Nassr Ronaldo-Messi match; Germany, Hungary, Czech Republic and Austria in June 2024 for Euro Cup; Switzerland, Spain, Portugal and Italy in October 2025 for El Clasico in Madrid.",
+    "football_proof": "Saudi Arabia February 2024 — Al Nassr stadium for Ronaldo and Messi. Germany June 2024 — Euro Cup matches. Madrid October 2025 — Real Madrid vs Barcelona at the Bernabeu. I have ticket stubs, stadium photos and passport stamps for every one.",
+    "ticket_spend": "I spent $1,130 USD on the two FIFA group-stage tickets through the official FIFA portal. I deliberately kept the trip to ten days and two matches so it stays focused — no extra knockout tickets, no extended stay.",
+    "match_choice": "Portugal vs DR Congo to see Ronaldo one more time on the World Cup stage. France vs Iraq because France are favourites and Philadelphia was the closest available match in my ten-day window. These were the two best fits for my dates and my budget.",
+    "between_matches": "After Houston on June 17 I fly to Philadelphia on June 18 or 19 and stay until after the June 22 match. Hotels in both cities are booked under my name. No side trips, no other cities — only Houston and Philadelphia.",
+    "duration": "June 15 to June 25 — ten days. Two days for arrival and rest before the first match, five days between the two matches in Philadelphia, three days after the second match for return. Tight, focused, and back at my desk the next working day.",
+    "why_us": "The World Cup is only in the US, Canada and Mexico in 2026, and my two tickets are in Houston and Philadelphia. I've watched football live in Saudi Arabia, Germany and Spain — the World Cup is a once-in-a-lifetime experience I want to see in person.",
+    "family_us": "No officer. I have no relatives, no friends, no contacts in the United States. Anyone can verify this.",
+    "sponsor": "Entirely self-funded from my salary and savings. No loan, no sponsor, no financial help from anyone.",
+    "ties": "My central government job and recent SDI promotion, my six-month-old son, my wife, my parents and brother in joint family, 21 acres of agricultural land, two houses, Rs 10.5 lakh pension fund, Rs 7 lakh savings, and a clean record returning from ten countries on time.",
+    "other_visa": "Never. I have never applied for any other US visa category. Neither has my wife. We have no migration intent.",
+    "intent": "No officer. I have a pensionable central government job, a recent promotion, a six-month-old son, my entire joint family, and significant property in India. I have zero interest in settling abroad and ten countries of evidence to back that up.",
+    "final_pitch": "Officer, three concrete things are different today: I am holding confirmed FIFA tickets I did not have in either previous interview, I have a six-month-old son born after the first refusal, and I was promoted to SDI three months ago. I'm asking for ten days. I'll be back on June 25.",
+    "if_refused": "Officer, if you refuse me today I'll respect the decision and return to my work. I'm not here to argue — I'm here to give you honest answers. If you approve me, you have my word I'll be back in India on June 25 as planned.",
 }
 
 # Curveball hostile questions
@@ -501,6 +576,19 @@ QUESTION_KEYWORDS = {
                     'allocated', 'scheduled', 'that\'s where'],
     "ticket_booking": ['fifa', 'portal', 'official', 'website', 'lottery', 'bought', 'paid',
                        'confirmation', 'booked', 'online', 'app'],
+    # New keys added for the personalized question pool
+    "promotion_leave": ['promoted', 'sdi', 'inspector', 'sub divisional', 'leave', 'sanctioned',
+                        'superintendent', 'approved', 'cover', 'january 2026', 'sub postmaster'],
+    "ticket_spend": ['1130', '1,130', '$', 'dollar', 'usd', 'fifa', 'two ticket', 'portal', 'group stage'],
+    "match_choice": ['portugal', 'congo', 'france', 'iraq', 'ronaldo', 'group', 'philadelphia', 'houston',
+                     'budget', 'window', 'dates'],
+    "between_matches": ['houston', 'philadelphia', 'fly', 'hotel', 'booked', 'no side trip', 'only',
+                       'june 18', 'june 19', 'june 20', 'june 21', 'june 22'],
+    "duration": ['ten day', '10 day', 'june 15', 'june 25', 'arrival', 'rest', 'between', 'return',
+                 'desk', 'next working day'],
+    "other_visa": ['no', 'never', 'tourist', 'b2', 'only', 'no other', 'wife', 'never applied'],
+    "if_refused": ['respect', 'accept', 'return', 'work', 'honest', 'word', 'back on june', 'won\'t',
+                   'will not', 'will return'],
 }
 
 
@@ -656,9 +744,40 @@ def _analyze_answer_full(answer, question_key=None):
     else:
         honesty = 9
 
+    # --- Professional VO realism layer ---------------------------------
+    # Bonus for mentioning specific, verifiable Ashish facts; penalty for
+    # vague platitudes, hedging, and stuff a real officer hates.
+    profile_facts = [
+        "sub divisional inspector", "sdi", "department of posts", "ministry of communications",
+        "1,07,360", "107360", "27 lakh", "14 lakh", "21 acre", "two house", "2 house",
+        "10.5 lakh", "7 lakh", "pension", "joint family", "november 20", "six month",
+        "6 month", "son", "wife", "portugal", "dr congo", "france", "iraq", "houston",
+        "philadelphia", "june 17", "june 22", "june 15", "june 25", "1130", "1,130",
+        "saudi", "ronaldo", "messi", "el clasico", "bernabeu", "euro cup", "turkey",
+        "hyderabad", "delhi", "214", "promoted", "january 2026", "sub postmaster",
+    ]
+    fact_hits = sum(1 for f in profile_facts if f in lower)
+    fact_bonus = min(15, fact_hits * 2)  # up to +15 / 100
+
+    weak_phrases = [
+        "i think", "maybe", "i guess", "i hope", "kind of", "sort of",
+        "i want to", "trust me", "believe me", "honestly speaking",
+        "actually speaking", "you know", "as i said", "like i said",
+    ]
+    weak_hits = sum(1 for w in weak_phrases if w in lower)
+    weak_penalty = min(15, weak_hits * 4)
+
+    # Length realism: a real visa answer is 1-3 sentences. Long rambling = bad.
+    length_penalty = 0
+    if wc > 80:
+        length_penalty = 8
+    elif wc > 120:
+        length_penalty = 15
+
     overall_10 = (clarity * 0.15 + confidence * 0.15 + specificity * 0.20 +
                   relevance * 0.25 + honesty * 0.25)
-    overall_100 = round(overall_10 * 10)
+    overall_100 = round(overall_10 * 10) + fact_bonus - weak_penalty - length_penalty
+    overall_100 = max(0, min(100, overall_100))
 
     if "contradiction" in red_flags:
         tip = "That contradicts your DS-160 — stick to the truth."
@@ -1014,9 +1133,11 @@ def start_interview():
         "forced_followup_remaining": 0,
         "last_parent_key": None,
     }
+    chosen_opening = random.choice(OPENINGS)
+    SESSIONS[session_id]["opening"] = chosen_opening
 
     return jsonify({
-        "message": OPENING,
+        "message": chosen_opening,
         "done": False,
         "difficulty": difficulty,
         "applicant": applicant_name,
