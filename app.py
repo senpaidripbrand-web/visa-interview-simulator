@@ -754,31 +754,38 @@ def _analyze_answer_full(answer, question_key=None):
             any(term in lower for term in group) for group in anchor_groups
         )
 
-        total = len(relevant_kw) or 1
-        ratio = hits / total
+        # Count anchor groups satisfied (how many required topics did they hit)
+        anchor_groups_hit = sum(
+            1 for group in anchor_groups if any(term in lower for term in group)
+        ) if anchor_groups else 0
+        anchor_total = len(anchor_groups) if anchor_groups else 0
+        anchor_coverage = (anchor_groups_hit / anchor_total) if anchor_total else 1.0
 
-        if not anchor_ok:
-            # Officer view: applicant did not actually address the question.
+        if anchor_total and anchor_coverage == 0:
+            # Completely missed every required topic — off-topic.
             relevance = 1 if hits == 0 else 3
-        elif ratio >= 0.45 and hits >= 4:
-            relevance = 10
-        elif ratio >= 0.30 and hits >= 3:
-            relevance = 8
-        elif ratio >= 0.18 and hits >= 2:
-            relevance = 6
-        elif hits >= 1:
-            relevance = 4
         else:
-            relevance = 2
-
-        # Off-topic penalty: if the answer is long but anchors missing,
-        # the applicant is dodging — drop relevance further.
-        if not anchor_ok and wc > 25:
-            relevance = max(1, relevance - 2)
+            # Score on hits — generous tiers since real answers are short.
+            if hits >= 5:
+                relevance = 10
+            elif hits >= 4:
+                relevance = 9
+            elif hits >= 3:
+                relevance = 8
+            elif hits >= 2:
+                relevance = 7
+            elif hits >= 1:
+                relevance = 6
+            else:
+                relevance = 3
+            # Bonus for hitting full anchor coverage
+            if anchor_coverage >= 0.99 and relevance < 10:
+                relevance += 1
+            relevance = min(10, relevance)
 
         # Question-asks-yes-or-no but applicant rambles without answering it
         if question_key in ("intent", "family_us", "other_visa") and not re.search(r'\b(no|never|none|nobody|yes)\b', lower):
-            relevance = min(relevance, 3)
+            relevance = min(relevance, 4)
     else:
         relevance = 5
 
