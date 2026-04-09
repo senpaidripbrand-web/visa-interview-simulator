@@ -1911,6 +1911,110 @@ def save_transcript_to_disk(s):
         }, f)
 
 
+@app.route("/leaderboard", methods=["GET"])
+def leaderboard():
+    rows = []
+    try:
+        files = sorted(os.listdir(TRANSCRIPTS_DIR), reverse=True)
+        for fname in files:
+            if not fname.endswith(".json"):
+                continue
+            try:
+                with open(os.path.join(TRANSCRIPTS_DIR, fname)) as f:
+                    data = json.load(f)
+                rows.append({
+                    "id": fname.replace(".json", ""),
+                    "date": data.get("date", ""),
+                    "score": data.get("overall_score", 0),
+                    "verdict": data.get("verdict", ""),
+                    "qcount": len(data.get("transcript", [])),
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    rows_sorted = sorted(rows, key=lambda r: r["score"], reverse=True)
+    total = len(rows_sorted)
+    avg = round(sum(r["score"] for r in rows_sorted) / total) if total else 0
+    approved = sum(1 for r in rows_sorted if "APPROVAL" in (r.get("verdict") or ""))
+
+    def color(v):
+        if "APPROVAL" in v: return "#4caf50"
+        if "BORDERLINE" in v: return "#ff9800"
+        return "#ef4444"
+
+    rows_html = "".join(
+        f'<tr><td style="color:#5b9aff;font-weight:700;">#{i+1}</td>'
+        f'<td><span style="font-size:20px;font-weight:700;color:{color(r["verdict"])}">{r["score"]}</span><span style="color:#667;">/100</span></td>'
+        f'<td><span style="background:{color(r["verdict"])};color:#0a0e17;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">{r["verdict"]}</span></td>'
+        f'<td style="color:#a0a8b8;">{r["qcount"]} Qs</td>'
+        f'<td style="color:#778;font-size:12px;">{r["date"]}</td>'
+        f'<td><a href="/leaderboard/{r["id"]}" style="color:#5b9aff;text-decoration:none;font-size:12px;">View →</a></td></tr>'
+        for i, r in enumerate(rows_sorted)
+    ) or '<tr><td colspan="6" style="text-align:center;color:#667;padding:40px;">No interviews recorded yet.</td></tr>'
+
+    html = f"""<!DOCTYPE html><html><head><title>Leaderboard — US Visa Interview Simulator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{{background:#0a0e17;color:#e8ecf4;font-family:-apple-system,sans-serif;margin:0;padding:30px 20px;}}
+.wrap{{max-width:900px;margin:0 auto;}}
+h1{{color:#5b9aff;font-size:28px;margin:0 0 4px;}}
+.sub{{color:#778;font-size:14px;margin-bottom:24px;}}
+.stats{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}}
+.stat{{background:#141a2a;border:1px solid #1e2a42;border-radius:12px;padding:18px;text-align:center;}}
+.stat .num{{font-size:32px;font-weight:700;color:#5b9aff;}}
+.stat .lbl{{font-size:11px;text-transform:uppercase;color:#778;letter-spacing:.6px;margin-top:4px;}}
+table{{width:100%;background:#141a2a;border:1px solid #1e2a42;border-radius:12px;border-collapse:separate;border-spacing:0;overflow:hidden;}}
+th,td{{padding:14px 16px;text-align:left;border-bottom:1px solid #1e2a42;}}
+th{{background:#0f1626;color:#5b9aff;font-size:11px;text-transform:uppercase;letter-spacing:.6px;}}
+tr:last-child td{{border-bottom:none;}}
+tr:hover td{{background:#1a2238;}}
+.back{{display:inline-block;margin-bottom:18px;color:#5b9aff;text-decoration:none;font-size:13px;}}
+</style></head><body><div class="wrap">
+<a class="back" href="/">← Back to Interview</a>
+<h1>🏆 Leaderboard</h1>
+<div class="sub">All interviews ever taken on this server, ranked by score.</div>
+<div class="stats">
+  <div class="stat"><div class="num">{total}</div><div class="lbl">Total Interviews</div></div>
+  <div class="stat"><div class="num">{avg}</div><div class="lbl">Average Score</div></div>
+  <div class="stat"><div class="num">{approved}</div><div class="lbl">Likely Approvals</div></div>
+</div>
+<table><thead><tr><th>Rank</th><th>Score</th><th>Verdict</th><th>Length</th><th>Date</th><th></th></tr></thead>
+<tbody>{rows_html}</tbody></table>
+</div></body></html>"""
+    return html
+
+
+@app.route("/leaderboard/<entry_id>", methods=["GET"])
+def leaderboard_entry(entry_id):
+    entry_id = os.path.basename(entry_id).replace("/", "")
+    path = os.path.join(TRANSCRIPTS_DIR, f"{entry_id}.json")
+    if not os.path.exists(path):
+        return "Not found", 404
+    with open(path) as f:
+        data = json.load(f)
+    score_val = data.get("overall_score", 0)
+    verdict = data.get("verdict", "")
+    color = "#4caf50" if "APPROVAL" in verdict else ("#ff9800" if "BORDERLINE" in verdict else "#ef4444")
+    rows = ""
+    for i, t in enumerate(data.get("transcript", []), 1):
+        sc = t.get("score_100", 0)
+        sc_color = "#4caf50" if sc >= 70 else ("#ff9800" if sc >= 45 else "#ef4444")
+        ideal = t.get("ideal", "")
+        ideal_block = f'<div style="margin-top:10px;padding:10px 12px;background:#0f1a2e;border-left:3px solid #4caf50;border-radius:6px;"><div style="font-size:10px;text-transform:uppercase;color:#4caf50;letter-spacing:.6px;margin-bottom:4px;">✓ Ideal Answer</div><div style="color:#d8e0ee;font-size:13px;line-height:1.55;">{ideal}</div></div>' if ideal else ""
+        rows += f'<div style="background:#141a2a;border:1px solid #1e2a42;border-radius:12px;padding:16px;margin-bottom:12px;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;"><div style="color:#5b9aff;font-weight:700;font-size:14px;">Q{i}: {t.get("q","")}</div><div style="color:{sc_color};font-weight:700;">{sc}/100</div></div><div style="color:#c8d0e0;font-size:13px;"><b style="color:#5b9aff;">Answer:</b> "{t.get("a","")}"</div>{ideal_block}</div>'
+    html = f"""<!DOCTYPE html><html><head><title>Interview #{entry_id}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{{background:#0a0e17;color:#e8ecf4;font-family:-apple-system,sans-serif;margin:0;padding:30px 20px;}}.wrap{{max-width:900px;margin:0 auto;}}h1{{color:#5b9aff;}}a{{color:#5b9aff;text-decoration:none;}}</style>
+</head><body><div class="wrap"><a href="/leaderboard">← Back to Leaderboard</a>
+<h1>Interview · <span style="color:{color}">{score_val}/100</span> · {verdict}</h1>
+<div style="color:#778;font-size:13px;margin-bottom:20px;">{data.get("date","")}</div>
+{rows}
+</div></body></html>"""
+    return html
+
+
 @app.route("/api/past_interviews", methods=["GET"])
 def past_interviews():
     out = []
