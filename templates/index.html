@@ -385,13 +385,23 @@
                 });
             });
         });
-        // ---- Leaderboard modal (sortable by score / date) ----
+        // ---- Leaderboard (localStorage-backed, survives Render redeploys) ----
+        function loadLeaderboard() { return JSON.parse(localStorage.getItem('leaderboard') || '[]'); }
+        function saveLeaderboard(list) { localStorage.setItem('leaderboard', JSON.stringify(list.slice(-50))); }
+        function addToLeaderboard(entry) {
+            const list = loadLeaderboard();
+            // dedupe by id
+            const idx = list.findIndex(e => e.id === entry.id);
+            if (idx >= 0) list[idx] = entry; else list.push(entry);
+            saveLeaderboard(list);
+        }
+
         let lbData = [];
         let lbSort = 'score';
         function renderLeaderboard() {
             const rows = lbData.slice();
             if (lbSort === 'score') rows.sort((a,b) => (b.score||0) - (a.score||0));
-            else rows.sort((a,b) => (b.id||0) - (a.id||0));
+            else rows.sort((a,b) => new Date(b.date||0) - new Date(a.date||0));
             const total = rows.length;
             const avg = total ? Math.round(rows.reduce((s,r) => s + (r.score||0), 0) / total) : 0;
             const approved = rows.filter(r => (r.verdict||'').includes('APPROVAL')).length;
@@ -399,10 +409,10 @@
                 <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#5b9aff;">${total}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Total</div></div>
                 <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#5b9aff;">${avg}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Avg Score</div></div>
                 <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#4caf50;">${approved}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Approvals</div></div>`;
-            const html = total === 0 ? '<p style="color:#778;text-align:center;padding:30px;">No interviews recorded yet.</p>' :
+            const html = total === 0 ? '<p style="color:#778;text-align:center;padding:30px;">No interviews recorded yet. Complete an interview to see it here!</p>' :
                 rows.map((r,i) => {
                     const c = (r.verdict||'').includes('APPROVAL') ? '#4caf50' : ((r.verdict||'').includes('BORDERLINE') ? '#ff9800' : '#ef4444');
-                    return `<div class="past-row" data-id="${r.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #1e2a42;cursor:pointer;">
+                    return `<div class="past-row" data-idx="${i}" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #1e2a42;cursor:pointer;">
                         <span style="color:#5b9aff;font-weight:700;width:36px;">#${i+1}</span>
                         <span style="font-size:20px;font-weight:700;color:${c};width:60px;">${r.score||0}<span style="color:#667;font-size:12px;">/100</span></span>
                         <span style="background:${c};color:#0a0e17;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;">${r.verdict||''}</span>
@@ -415,29 +425,24 @@
             $('lbSortScore').style.color = lbSort==='score'?'#0a0e17':'#5b9aff';
             $('lbSortDate').style.background = lbSort==='date'?'#5b9aff':'#1e2a42';
             $('lbSortDate').style.color = lbSort==='date'?'#0a0e17':'#5b9aff';
-            $('lbList').querySelectorAll('.past-row').forEach(el => el.addEventListener('click', async () => {
-                try {
-                    const r = await fetch('/api/past_interviews');
-                    const d = await r.json();
-                    const entry = (d.past||[]).find(p => p.id === el.dataset.id);
-                    if (entry && entry.transcript) {
-                        $('leaderboardModal').classList.remove('active');
-                        renderScoreScreen({overall_score: entry.score, verdict: entry.verdict, transcript: entry.transcript, rubric_avg: {}, strengths: [], weaknesses: [], red_flags_summary: []});
-                        $('setupScreen').style.display = 'none';
-                        $('scoreScreen').classList.add('active');
-                    }
-                } catch(e) {}
+            // Click row to view that interview's transcript
+            $('lbList').querySelectorAll('.past-row').forEach(el => el.addEventListener('click', () => {
+                const idx = parseInt(el.dataset.idx);
+                const entry = rows[idx];
+                if (entry && entry.transcript) {
+                    $('leaderboardModal').classList.remove('active');
+                    renderScoreScreen({overall_score: entry.score, verdict: entry.verdict, verdict_color: c_for(entry.verdict), transcript: entry.transcript, rubric_avg: entry.rubric_avg||{}, strengths: entry.strengths||[], weaknesses: entry.weaknesses||[], red_flags_summary: entry.red_flags_summary||[]});
+                    $('setupScreen').style.display = 'none';
+                    $('scoreScreen').classList.add('active');
+                }
             }));
         }
-        $('leaderboardBtn').addEventListener('click', async () => {
+        function c_for(v) { return (v||'').includes('APPROVAL')?'#4caf50':(v||'').includes('BORDERLINE')?'#ff9800':'#ef4444'; }
+
+        $('leaderboardBtn').addEventListener('click', () => {
+            lbData = loadLeaderboard();
             $('leaderboardModal').classList.add('active');
-            $('lbList').innerHTML = '<p style="color:#778;text-align:center;padding:30px;">Loading…</p>';
-            try {
-                const res = await fetch('/api/past_interviews');
-                const d = await res.json();
-                lbData = (d.past||[]).map(p => ({ id: p.id, date: p.date, score: p.score, verdict: p.verdict, qcount: (p.transcript||[]).length }));
-                renderLeaderboard();
-            } catch(e) { $('lbList').innerHTML = '<p style="color:#ef4444;">Failed to load.</p>'; }
+            renderLeaderboard();
         });
         $('lbSortScore').addEventListener('click', () => { lbSort='score'; renderLeaderboard(); });
         $('lbSortDate').addEventListener('click', () => { lbSort='date'; renderLeaderboard(); });
@@ -630,8 +635,9 @@
                 const data = await res.json();
                 lastScoreData = data;
                 renderScoreScreen(data);
+                const nowStr = new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
                 const entry = {
-                    date: new Date().toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }),
+                    date: nowStr,
                     overall_score: data.overall_score,
                     verdict: data.verdict,
                     verdict_color: data.verdict_color,
@@ -639,6 +645,19 @@
                     transcript: data.transcript
                 };
                 addToHistory(entry);
+                // Also save to persistent leaderboard (localStorage survives Render redeploys)
+                addToLeaderboard({
+                    id: 'interview_' + Date.now(),
+                    date: nowStr,
+                    score: data.overall_score,
+                    verdict: data.verdict,
+                    qcount: (data.transcript||[]).length,
+                    transcript: data.transcript,
+                    rubric_avg: data.rubric_avg,
+                    strengths: data.strengths,
+                    weaknesses: data.weaknesses,
+                    red_flags_summary: data.red_flags_summary
+                });
             } catch(e) { $('scoreContent').innerHTML = '<p>Error generating feedback.</p>'; }
         }
 
