@@ -208,6 +208,7 @@
 
             <button class="start-btn" id="startBtn">Begin Interview</button>
             <button class="past-link" id="pastBtn">📊 Past Interviews</button>
+            <button class="past-link" id="leaderboardBtn" style="margin-top:8px;">🏆 Leaderboard</button>
         </div>
 
         <div class="chat-container" id="chatScreen">
@@ -243,6 +244,21 @@
                 <button class="dl-btn" id="dlScorecardBtn">📥 Download Scorecard</button>
                 <button class="retry-btn" id="retryBtn">Try Again</button>
             </div>
+        </div>
+    </div>
+
+    <div class="modal-bg" id="leaderboardModal">
+        <div class="modal" style="max-width:760px;">
+            <button class="modal-close" data-close="leaderboardModal">×</button>
+            <h3 style="display:flex;align-items:center;justify-content:space-between;">
+                <span>🏆 Leaderboard</span>
+                <span style="display:flex;gap:6px;">
+                    <button id="lbSortScore" class="btn-sm" style="padding:6px 12px;font-size:11px;background:#5b9aff;color:#0a0e17;border:none;border-radius:6px;cursor:pointer;font-weight:700;">By Score</button>
+                    <button id="lbSortDate" class="btn-sm" style="padding:6px 12px;font-size:11px;background:#1e2a42;color:#5b9aff;border:1px solid #5b9aff;border-radius:6px;cursor:pointer;font-weight:700;">By Date</button>
+                </span>
+            </h3>
+            <div id="lbStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0;"></div>
+            <div id="lbList" style="max-height:60vh;overflow-y:auto;"></div>
         </div>
     </div>
 
@@ -369,6 +385,63 @@
                 });
             });
         });
+        // ---- Leaderboard modal (sortable by score / date) ----
+        let lbData = [];
+        let lbSort = 'score';
+        function renderLeaderboard() {
+            const rows = lbData.slice();
+            if (lbSort === 'score') rows.sort((a,b) => (b.score||0) - (a.score||0));
+            else rows.sort((a,b) => (b.id||0) - (a.id||0));
+            const total = rows.length;
+            const avg = total ? Math.round(rows.reduce((s,r) => s + (r.score||0), 0) / total) : 0;
+            const approved = rows.filter(r => (r.verdict||'').includes('APPROVAL')).length;
+            $('lbStats').innerHTML = `
+                <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#5b9aff;">${total}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Total</div></div>
+                <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#5b9aff;">${avg}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Avg Score</div></div>
+                <div style="background:#0f1626;border:1px solid #1e2a42;border-radius:10px;padding:12px;text-align:center;"><div style="font-size:24px;font-weight:700;color:#4caf50;">${approved}</div><div style="font-size:10px;text-transform:uppercase;color:#778;">Approvals</div></div>`;
+            const html = total === 0 ? '<p style="color:#778;text-align:center;padding:30px;">No interviews recorded yet.</p>' :
+                rows.map((r,i) => {
+                    const c = (r.verdict||'').includes('APPROVAL') ? '#4caf50' : ((r.verdict||'').includes('BORDERLINE') ? '#ff9800' : '#ef4444');
+                    return `<div class="past-row" data-id="${r.id}" style="display:flex;align-items:center;gap:12px;padding:12px;border-bottom:1px solid #1e2a42;cursor:pointer;">
+                        <span style="color:#5b9aff;font-weight:700;width:36px;">#${i+1}</span>
+                        <span style="font-size:20px;font-weight:700;color:${c};width:60px;">${r.score||0}<span style="color:#667;font-size:12px;">/100</span></span>
+                        <span style="background:${c};color:#0a0e17;padding:3px 8px;border-radius:10px;font-size:10px;font-weight:700;">${r.verdict||''}</span>
+                        <span style="color:#a0a8b8;font-size:11px;">${r.qcount||0} Qs</span>
+                        <span style="color:#778;font-size:11px;margin-left:auto;">${r.date||''}</span>
+                    </div>`;
+                }).join('');
+            $('lbList').innerHTML = html;
+            $('lbSortScore').style.background = lbSort==='score'?'#5b9aff':'#1e2a42';
+            $('lbSortScore').style.color = lbSort==='score'?'#0a0e17':'#5b9aff';
+            $('lbSortDate').style.background = lbSort==='date'?'#5b9aff':'#1e2a42';
+            $('lbSortDate').style.color = lbSort==='date'?'#0a0e17':'#5b9aff';
+            $('lbList').querySelectorAll('.past-row').forEach(el => el.addEventListener('click', async () => {
+                try {
+                    const r = await fetch('/api/past_interviews');
+                    const d = await r.json();
+                    const entry = (d.past||[]).find(p => p.id === el.dataset.id);
+                    if (entry && entry.transcript) {
+                        $('leaderboardModal').classList.remove('active');
+                        renderScoreScreen({overall_score: entry.score, verdict: entry.verdict, transcript: entry.transcript, rubric_avg: {}, strengths: [], weaknesses: [], red_flags_summary: []});
+                        $('setupScreen').style.display = 'none';
+                        $('scoreScreen').classList.add('active');
+                    }
+                } catch(e) {}
+            }));
+        }
+        $('leaderboardBtn').addEventListener('click', async () => {
+            $('leaderboardModal').classList.add('active');
+            $('lbList').innerHTML = '<p style="color:#778;text-align:center;padding:30px;">Loading…</p>';
+            try {
+                const res = await fetch('/api/past_interviews');
+                const d = await res.json();
+                lbData = (d.past||[]).map(p => ({ id: p.id, date: p.date, score: p.score, verdict: p.verdict, qcount: (p.transcript||[]).length }));
+                renderLeaderboard();
+            } catch(e) { $('lbList').innerHTML = '<p style="color:#ef4444;">Failed to load.</p>'; }
+        });
+        $('lbSortScore').addEventListener('click', () => { lbSort='score'; renderLeaderboard(); });
+        $('lbSortDate').addEventListener('click', () => { lbSort='date'; renderLeaderboard(); });
+
         document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => $(b.dataset.close).classList.remove('active')));
 
         // ---- Timer ----
