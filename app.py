@@ -1898,9 +1898,19 @@ def save_transcript_to_disk(s):
     answers = s.get("answers", [])
     if not answers:
         return
+    # Dedupe: only save once per session. If already saved, overwrite same file.
+    if s.get("_saved_transcript_file"):
+        path = s["_saved_transcript_file"]
+        if not os.path.exists(path):
+            s.pop("_saved_transcript_file", None)
     payload = build_full_score(answers, s)
-    ts = int(time.time())
-    path = os.path.join(TRANSCRIPTS_DIR, f"{ts}.json")
+    if s.get("_saved_transcript_file"):
+        path = s["_saved_transcript_file"]
+        ts = int(os.path.basename(path).replace(".json", "")) if os.path.basename(path).replace(".json","").isdigit() else int(time.time())
+    else:
+        ts = int(time.time())
+        path = os.path.join(TRANSCRIPTS_DIR, f"{ts}.json")
+        s["_saved_transcript_file"] = path
     with open(path, "w") as f:
         json.dump({
             "timestamp": ts,
