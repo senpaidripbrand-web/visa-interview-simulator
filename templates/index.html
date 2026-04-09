@@ -439,9 +439,20 @@
         }
         function c_for(v) { return (v||'').includes('APPROVAL')?'#4caf50':(v||'').includes('BORDERLINE')?'#ff9800':'#ef4444'; }
 
-        $('leaderboardBtn').addEventListener('click', () => {
-            lbData = loadLeaderboard();
+        $('leaderboardBtn').addEventListener('click', async () => {
             $('leaderboardModal').classList.add('active');
+            $('lbList').innerHTML = '<p style="color:#778;text-align:center;padding:30px;">Loading…</p>';
+            try {
+                const res = await fetch('/api/leaderboard');
+                const d = await res.json();
+                lbData = (d.entries || []).map(e => ({
+                    id: e.id, date: e.date, score: e.score, verdict: e.verdict,
+                    qcount: e.qcount || (e.transcript||[]).length,
+                    transcript: e.transcript
+                }));
+            } catch(e) {
+                lbData = loadLeaderboard();
+            }
             renderLeaderboard();
         });
         $('lbSortScore').addEventListener('click', () => { lbSort='score'; renderLeaderboard(); });
@@ -645,19 +656,22 @@
                     transcript: data.transcript
                 };
                 addToHistory(entry);
-                // Also save to persistent leaderboard (localStorage survives Render redeploys)
-                addToLeaderboard({
+                // Save to persistent cloud leaderboard (visible to ALL users)
+                const lbEntry = {
                     id: 'interview_' + Date.now(),
                     date: nowStr,
                     score: data.overall_score,
                     verdict: data.verdict,
                     qcount: (data.transcript||[]).length,
-                    transcript: data.transcript,
-                    rubric_avg: data.rubric_avg,
-                    strengths: data.strengths,
-                    weaknesses: data.weaknesses,
-                    red_flags_summary: data.red_flags_summary
-                });
+                    transcript: data.transcript
+                };
+                addToLeaderboard(lbEntry);
+                // Submit to cloud so everyone can see it
+                fetch('/api/leaderboard/submit', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(lbEntry)
+                }).catch(()=>{});
             } catch(e) { $('scoreContent').innerHTML = '<p>Error generating feedback.</p>'; }
         }
 

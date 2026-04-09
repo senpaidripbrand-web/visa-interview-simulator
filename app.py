@@ -1921,32 +1921,58 @@ def save_transcript_to_disk(s):
         }, f)
 
 
-@app.route("/leaderboard", methods=["GET"])
-def leaderboard():
-    rows = []
+# ---- Cloud Leaderboard (jsonblob.com — persists across Render redeploys) ----
+JSONBLOB_ID = "019d741f-d650-7224-8d47-e17e9843e28d"
+JSONBLOB_URL = f"https://jsonblob.com/api/jsonBlob/{JSONBLOB_ID}"
+
+def _cloud_lb_get():
+    """Fetch leaderboard entries from jsonblob."""
     try:
-        files = sorted(os.listdir(TRANSCRIPTS_DIR), reverse=True)
-        for fname in files:
-            if not fname.endswith(".json"):
-                continue
-            try:
-                with open(os.path.join(TRANSCRIPTS_DIR, fname)) as f:
-                    data = json.load(f)
-                rows.append({
-                    "id": fname.replace(".json", ""),
-                    "date": data.get("date", ""),
-                    "score": data.get("overall_score", 0),
-                    "verdict": data.get("verdict", ""),
-                    "qcount": len(data.get("transcript", [])),
-                })
-            except Exception:
-                continue
+        r = _requests.get(JSONBLOB_URL, timeout=8, headers={"Accept": "application/json"})
+        if r.status_code == 200:
+            data = r.json()
+            return data.get("entries", []) if isinstance(data, dict) else []
     except Exception:
         pass
+    return []
 
-    rows_sorted = sorted(rows, key=lambda r: r["score"], reverse=True)
+def _cloud_lb_append(entry):
+    """Append an entry to the cloud leaderboard."""
+    try:
+        entries = _cloud_lb_get()
+        entries.append(entry)
+        # Keep last 200 entries
+        entries = entries[-200:]
+        _requests.put(JSONBLOB_URL, json={"entries": entries}, timeout=10,
+                      headers={"Content-Type": "application/json"})
+    except Exception as e:
+        print(f"[cloud leaderboard write failed] {e}")
+
+@app.route("/api/leaderboard", methods=["GET"])
+def api_leaderboard():
+    entries = _cloud_lb_get()
+    return jsonify({"entries": entries})
+
+@app.route("/api/leaderboard/submit", methods=["POST"])
+def api_leaderboard_submit():
+    data = request.get_json(silent=True) or {}
+    entry = {
+        "id": data.get("id", str(int(time.time()))),
+        "date": data.get("date", time.strftime("%Y-%m-%d %H:%M")),
+        "score": data.get("score", 0),
+        "verdict": data.get("verdict", ""),
+        "qcount": data.get("qcount", 0),
+        "transcript": data.get("transcript", []),
+    }
+    _cloud_lb_append(entry)
+    return jsonify({"ok": True})
+
+@app.route("/leaderboard", methods=["GET"])
+def leaderboard():
+    entries = _cloud_lb_get()
+    rows_sorted = sorted(entries, key=lambda r: r.get("score", 0), reverse=True)
     total = len(rows_sorted)
-    avg = round(sum(r["score"] for r in rows_sorted) / total) if total else 0
+    avg = round(sum(r.get("score", 0) for r in rows_sorted) / total) if total else 0
     approved = sum(1 for r in rows_sorted if "APPROVAL" in (r.get("verdict") or ""))
 
     def color(v):
@@ -1956,11 +1982,11 @@ def leaderboard():
 
     rows_html = "".join(
         f'<tr><td style="color:#5b9aff;font-weight:700;">#{i+1}</td>'
-        f'<td><span style="font-size:20px;font-weight:700;color:{color(r["verdict"])}">{r["score"]}</span><span style="color:#667;">/100</span></td>'
-        f'<td><span style="background:{color(r["verdict"])};color:#0a0e17;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">{r["verdict"]}</span></td>'
-        f'<td style="color:#a0a8b8;">{r["qcount"]} Qs</td>'
-        f'<td style="color:#778;font-size:12px;">{r["date"]}</td>'
-        f'<td><a href="/leaderboard/{r["id"]}" style="color:#5b9aff;text-decoration:none;font-size:12px;">View →</a></td></tr>'
+        f'<td><span style="font-size:20px;font-weight:700;color:{color(r.get("verdict",""))}">{r.get("score",0)}</span><span style="color:#667;">/100</span></td>'
+        f'<td><span style="background:{color(r.get("verdict",""))};color:#0a0e17;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:700;">{r.get("verdict","")}</span></td>'
+        f'<td style="color:#a0a8b8;">{r.get("qcount",0)} Qs</td>'
+        f'<td style="color:#778;font-size:12px;">{r.get("date","")}</td>'
+        f'<td><a href="/leaderboard/{r.get("id","")}" style="color:#5b9aff;text-decoration:none;font-size:12px;">View →</a></td></tr>'
         for i, r in enumerate(rows_sorted)
     ) or '<tr><td colspan="6" style="text-align:center;color:#667;padding:40px;">No interviews recorded yet.</td></tr>'
 
@@ -1984,7 +2010,7 @@ tr:hover td{{background:#1a2238;}}
 </style></head><body><div class="wrap">
 <a class="back" href="/">← Back to Interview</a>
 <h1>🏆 Leaderboard</h1>
-<div class="sub">All interviews ever taken on this server, ranked by score.</div>
+<div class="sub">All interviews ever taken by anyone, ranked by score.</div>
 <div class="stats">
   <div class="stat"><div class="num">{total}</div><div class="lbl">Total Interviews</div></div>
   <div class="stat"><div class="num">{avg}</div><div class="lbl">Average Score</div></div>
@@ -1998,13 +2024,15 @@ tr:hover td{{background:#1a2238;}}
 
 @app.route("/leaderboard/<entry_id>", methods=["GET"])
 def leaderboard_entry(entry_id):
-    entry_id = os.path.basename(entry_id).replace("/", "")
-    path = os.path.join(TRANSCRIPTS_DIR, f"{entry_id}.json")
-    if not os.path.exists(path):
+    entries = _cloud_lb_get()
+    data = None
+    for e in entries:
+        if str(e.get("id")) == str(entry_id):
+            data = e
+            break
+    if not data:
         return "Not found", 404
-    with open(path) as f:
-        data = json.load(f)
-    score_val = data.get("overall_score", 0)
+    score_val = data.get("score", 0)
     verdict = data.get("verdict", "")
     color = "#4caf50" if "APPROVAL" in verdict else ("#ff9800" if "BORDERLINE" in verdict else "#ef4444")
     rows = ""
